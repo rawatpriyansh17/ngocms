@@ -5,10 +5,11 @@ import { eq } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, parseInt(params.id)));
+    const { id } = await params;
+    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, parseInt(id)));
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
@@ -21,14 +22,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const [updatedEvent] = await db
       .update(eventsTable)
-      .set({ ...body, updatedAt: new Date().toISOString() })
-      .where(eq(eventsTable.id, parseInt(params.id)))
+      .set(body)
+      .where(eq(eventsTable.id, parseInt(id)))
       .returning();
     
     if (!updatedEvent) {
@@ -44,12 +46,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const [deletedEvent] = await db
       .delete(eventsTable)
-      .where(eq(eventsTable.id, parseInt(params.id)))
+      .where(eq(eventsTable.id, parseInt(id)))
       .returning();
     
     if (!deletedEvent) {

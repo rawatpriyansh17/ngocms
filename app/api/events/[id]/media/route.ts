@@ -5,13 +5,14 @@ import { eq, asc } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const media = await db
       .select()
       .from(mediaTable)
-      .where(eq(mediaTable.eventId, parseInt(params.id)))
+      .where(eq(mediaTable.eventId, parseInt(id)))
       .orderBy(asc(mediaTable.order));
     
     return NextResponse.json(media);
@@ -23,13 +24,14 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const mediaData = {
       ...body,
-      eventId: parseInt(params.id)
+      eventId: parseInt(id)
     };
     
     const [newMedia] = await db.insert(mediaTable).values(mediaData).returning();

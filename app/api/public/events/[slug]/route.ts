@@ -5,9 +5,10 @@ import { eq, asc } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const { slug } = await params;
     const headers = {
       'Access-Control-Allow-Origin': 'https://sitaramsevasansthan.org',
       'Access-Control-Allow-Methods': 'GET',
@@ -18,7 +19,7 @@ export async function GET(
     const [event] = await db
       .select()
       .from(eventsTable)
-      .where(eq(eventsTable.slug, params.slug));
+      .where(eq(eventsTable.slug, slug));
 
     if (!event) {
       return NextResponse.json(

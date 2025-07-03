@@ -5,10 +5,11 @@ import { eq } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const [post] = await db.select().from(postsTable).where(eq(postsTable.id, parseInt(params.id)));
+    const { id } = await params;
+    const [post] = await db.select().from(postsTable).where(eq(postsTable.id, parseInt(id)));
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
@@ -21,14 +22,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const [updatedPost] = await db
       .update(postsTable)
-      .set({ ...body, updatedAt: new Date().toISOString() })
-      .where(eq(postsTable.id, parseInt(params.id)))
+      .set(body)
+      .where(eq(postsTable.id, parseInt(id)))
       .returning();
     
     if (!updatedPost) {
@@ -44,12 +46,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const [deletedPost] = await db
       .delete(postsTable)
-      .where(eq(postsTable.id, parseInt(params.id)))
+      .where(eq(postsTable.id, parseInt(id)))
       .returning();
     
     if (!deletedPost) {
