@@ -6,23 +6,31 @@ import { eq, desc } from 'drizzle-orm';
 export async function GET() {
   try {
     const headers = {
-      'Access-Control-Allow-Origin': '*', // Allow all origins like posts
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
     };
 
+    // First, let's get ALL events to see what's in the database
+    const allEvents = await db.select().from(eventsTable).orderBy(desc(eventsTable.createdAt));
+    console.log('All events in database:', allEvents.map(e => ({ id: e.id, slug: e.slug, isActive: e.isActive })));
+
+    // Then filter for active ones
     const events = await db
       .select()
       .from(eventsTable)
       .where(eq(eventsTable.isActive, true))
       .orderBy(desc(eventsTable.createdAt));
 
+    console.log('Active events:', events.length);
+
     return NextResponse.json(events, { headers });
   } catch (error) {
     console.error('Error fetching public events:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { error: 'Failed to fetch events' }, 
+      { error: 'Failed to fetch events', details: errorMessage }, 
       { status: 500 }
     );
   }
