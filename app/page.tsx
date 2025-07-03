@@ -1,103 +1,163 @@
-import Image from "next/image";
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart3, FileText, Calendar, Image, ArrowRight, Shield } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 font-poppins">
+      {/* Header */}
+      <header className="border-b border-pink-200 bg-white/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-pink-600 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-pink-900">NGO CMS</h1>
+                <p className="text-xs text-pink-700">Content Management System</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <SignedOut>
+                <SignInButton>
+                  <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/dashboard">
+                  <Button className="bg-pink-600 hover:bg-pink-700 text-white">
+                    Go to Dashboard
+                  </Button>
+                </Link>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <main className="container mx-auto px-4 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-6xl font-bold text-pink-900 mb-4">
+            NGO CMS Dashboard
+          </h1>
+          <p className="text-xl text-pink-700 mb-8 max-w-2xl mx-auto">
+            Powerful content management system for{' '}
+            <span className="font-semibold">sitaramsevasansthan.org</span>
+          </p>
+          
+          <SignedOut>
+            <SignInButton>
+              <Button size="lg" className="bg-pink-600 hover:bg-pink-700 text-white">
+                <Shield className="w-5 h-5 mr-2" />
+                Sign In to Access Dashboard
+              </Button>
+            </SignInButton>
+          </SignedOut>
+          
+          <SignedIn>
+            <Link href="/dashboard">
+              <Button size="lg" className="bg-pink-600 hover:bg-pink-700 text-white">
+                Open Dashboard
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+          </SignedIn>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <Card className="border-pink-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center">
+              <FileText className="w-12 h-12 text-pink-600 mx-auto mb-4" />
+              <CardTitle className="text-pink-900">Posts Management</CardTitle>
+              <CardDescription className="text-pink-700">
+                Create and manage homepage posts with bilingual content and media upload
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="border-pink-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center">
+              <Calendar className="w-12 h-12 text-pink-600 mx-auto mb-4" />
+              <CardTitle className="text-pink-900">Events Management</CardTitle>
+              <CardDescription className="text-pink-700">
+                Create event pages with descriptions, photo coverage, and video content
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          
+          <Card className="border-pink-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center">
+              <Image className="w-12 h-12 text-pink-600 mx-auto mb-4" />
+              <CardTitle className="text-pink-900">Media Library</CardTitle>
+              <CardDescription className="text-pink-700">
+                Upload and organize photos and videos with automatic optimization
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Features List */}
+        <div className="bg-white rounded-lg border border-pink-200 p-8">
+          <h2 className="text-2xl font-bold text-pink-900 mb-6 text-center">
+            Key Features
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-pink-900">Auto Translation</h3>
+                <p className="text-pink-700 text-sm">English ↔ Hindi content translation</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-pink-900">ImageKit Integration</h3>
+                <p className="text-pink-700 text-sm">Optimized image and video delivery</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-pink-900">Drag & Drop Upload</h3>
+                <p className="text-pink-700 text-sm">Easy file upload with progress tracking</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-pink-900">Real-time Updates</h3>
+                <p className="text-pink-700 text-sm">Changes reflect immediately on live site</p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
