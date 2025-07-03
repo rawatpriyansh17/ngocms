@@ -10,9 +10,10 @@ export async function GET(
   try {
     const { slug } = await params;
     const headers = {
-      'Access-Control-Allow-Origin': 'https://sitaramsevasansthan.org',
-      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Origin': '*', // Allow all origins like posts
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
     };
 
     // Get event by slug
@@ -55,4 +56,21 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  return NextResponse.json(
+    {},
+    {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    }
+  );
 }

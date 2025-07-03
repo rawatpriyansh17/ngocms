@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { eventsTable, mediaTable } from '@/db/schema';
-import { eq, desc, asc } from 'drizzle-orm';
+import { eventsTable } from '@/db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function GET() {
   try {
     const headers = {
-      'Access-Control-Allow-Origin': 'https://sitaramsevasansthan.org',
-      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Origin': '*', // Allow all origins like posts
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
     };
 
     const events = await db
@@ -25,4 +26,18 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json(
+    {},
+    {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    }
+  );
 }
