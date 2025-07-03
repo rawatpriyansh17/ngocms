@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { postsTable } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    // Add CORS headers for your live website
     const headers = {
-      'Access-Control-Allow-Origin': 'https://sitaramsevasansthan.org',
-      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Origin': '*', // Allow all origins for now
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
     };
 
     const posts = await db
       .select()
       .from(postsTable)
       .where(eq(postsTable.isActive, true))
-      .orderBy(desc(postsTable.order));
+      .orderBy(asc(postsTable.order));
 
     return NextResponse.json(posts, { headers });
   } catch (error) {
@@ -26,4 +26,18 @@ export async function GET() {
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json(
+    {},
+    {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    }
+  );
 }
