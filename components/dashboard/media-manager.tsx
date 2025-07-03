@@ -194,10 +194,12 @@ export default function MediaManager() {
   // Remove selected file
   const removeSelectedFile = () => {
     setSelectedFile(null);
-    setPreviewUrl('');
-    if (previewUrl) {
+    if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
     }
+    setPreviewUrl('');
+    // Clear url when removing file
+    setFormData(prev => ({ ...prev, url: '' }));
   };
 
   // Auto-translate content
@@ -395,7 +397,7 @@ export default function MediaManager() {
                 {/* Media Upload with Preview */}
                 <div className="space-y-2">
                   <Label>Media Upload</Label>
-                  {!selectedFile ? (
+                  {!selectedFile && !previewUrl ? (
                     <Dropzone
                       onDrop={handleFileDrop}
                       accept={{
@@ -438,12 +440,53 @@ export default function MediaManager() {
                         
                         {/* File Info */}
                         <div className="flex-1">
-                          <p className="font-medium text-pink-800">{selectedFile.name}</p>
-                          <p className="text-sm text-pink-600">
-                            {formData.type?.toUpperCase()} • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          {selectedFile ? (
+                            // New file being uploaded
+                            <>
+                              <p className="font-medium text-pink-800">{selectedFile.name}</p>
+                              <p className="text-sm text-pink-600">
+                                {formData.type?.toUpperCase()} • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </>
+                          ) : (
+                            // Existing uploaded file
+                            <>
+                              <p className="font-medium text-pink-800">Current Media</p>
+                              <p className="text-sm text-pink-600">
+                                {formData.type?.toUpperCase()} • Already uploaded
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Click X to remove and upload new media
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Replace button for existing media */}
+                        {!selectedFile && previewUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Clear current preview and show dropzone
+                              setPreviewUrl('');
+                              setFormData(prev => ({ ...prev, url: '' }));
+                            }}
+                            className="border-pink-300 text-pink-700 hover:bg-pink-50"
+                          >
+                            Replace
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {/* Drop new file hint for existing media */}
+                      {!selectedFile && previewUrl && (
+                        <div className="mt-3 pt-3 border-t border-pink-200">
+                          <p className="text-xs text-center text-pink-600">
+                            Or drag & drop a new file here to replace
                           </p>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
