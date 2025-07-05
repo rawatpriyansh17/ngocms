@@ -783,7 +783,7 @@ export default function EventsManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/events/${event.slug}`, '_blank')}
+                      onClick={() => window.open(`https://sitaramsevasansthan.org/events/${event.slug}`, '_blank')}
                       className="border-green-300 text-green-700 hover:bg-green-50"
                     >
                       <ExternalLink className="w-4 h-4" />
