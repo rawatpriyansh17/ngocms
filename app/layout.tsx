@@ -28,7 +28,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'NGOCMS',
+  title: 'CMS',
   description: 'CMS platform for sitaramsevasansthan.org',
 }
 

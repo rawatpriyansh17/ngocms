@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Save, X, Loader2, Languages, Calendar, Eye, ExternalLink, Image as ImageIcon, Video } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation';
-
+import Link from 'next/link';
 interface Event {
   id?: number;
   slug: string;
@@ -266,551 +267,659 @@ export default function EventsManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center h-64"
+      >
         <Loader2 className="w-8 h-8 animate-spin text-pink-600" />
-      </div>
+      </motion.div>
     );
   }
 
   const previewEvent = events.find(e => e.id === previewEventId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-pink-900">Events Management</h2>
-          <p className="text-pink-700">Manage event pages and their content</p>
+      <motion.div 
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4"
+      >
+        <div id='live-eventpreview'>
+          <h2 className="text-xl sm:text-2xl font-bold text-pink-900">Events Management</h2>
+          <p className="text-sm sm:text-base text-pink-700">Manage event pages and their content</p>
         </div>
-        <Button
-          onClick={() => setIsCreating(true)}
-          className="bg-pink-600 hover:bg-pink-700 text-white"
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className='text-center sm:text-right'
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Event
-        </Button>
-      </div>
+          <Button
+            onClick={() => setIsCreating(true)}
+            className="bg-gradient-to-b from-pink-400 via-pink-600 to-pink-500 hover:bg-pink-700 text-white w-full sm:w-auto font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Event
+          </Button>
+        </motion.div>
+      </motion.div>
 
       {/* Live Preview */}
-      {showPreview && previewEvent && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader >
-            <div className="flex justify-between items-center">
-            <CardTitle className="text-blue-900 flex items-center gap-2">
-              <Eye className="w-5 h-5" />
-              Live Preview - {previewEvent.heading_en}
-                          
-            </CardTitle>
-             <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(false)}
-                className="text-blue-700 hover:bg-blue-100 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-</div>
-          </CardHeader>
-                       
-          <CardContent>
-            <div className="bg-white rounded-lg p-6 space-y-6">
-              {/* Event Heading */}
-              <h1 className="text-3xl font-bold text-pink-800 text-center">
-                {previewEvent.heading_en}
-              </h1>
+      <AnimatePresence>
+        {showPreview && previewEvent && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+             
+          >
+            <Card  className="border-blue-200 bg-blue-50">
+              <CardHeader >
+                <div className="flex sm:justify-between sm:items-center gap-2">
+                  <CardTitle className="text-blue-900 flex items-center gap-2 text-base sm:text-lg">
+                    <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span   className="text-wrap text-xs">Live Preview - {previewEvent.heading_en}</span>
+                                     
+                  </CardTitle>
+                   <motion.div
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPreview(false)}
+                      className="text-blue-700 hover:bg-blue-100 cursor-pointer"
+                    
+                    >
+                      <X className="w-4 h-4 " />
+                    </Button>
+                  </motion.div>
 
-              {/* Description 1 */}
-              <div className="bg-white p-6 rounded-lg shadow-md border">
-                <p className="text-purple-700 font-semibold">
-                  {previewEvent.description1_en}
-                </p>
-              </div>
-
-              {/* Description 2 */}
-              {previewEvent.description2_en && (
-                <div className="bg-white p-6 rounded-lg shadow-md border">
-                  <p className="text-purple-700 font-semibold">
-                    {previewEvent.description2_en}
-                  </p>
                 </div>
-              )}
+              </CardHeader>
+              
+              <CardContent>
+                <div className="bg-white rounded-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
+                  {/* Event Heading */}
+                  <motion.h1 
+                    initial={{ scale: 0.95 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-xl sm:text-3xl font-bold text-pink-800 text-center text-wrap"
+                  >
+                    {previewEvent.heading_en}
+                  </motion.h1>
 
-              {/* Photo Section */}
-              {previewMedia.some(m => m.type === 'photo') && (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-pink-800">
-                    {previewEvent.photoSubheading_en}
-                  </h2>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {previewMedia
-                      .filter(m => m.type === 'photo')
-                      .slice(0, 4)
-                      .map((photo) => (
-                        <div key={photo.id} className="bg-white p-2 rounded-lg shadow-md">
-                          <img
-                            src={photo.url}
-                            alt={photo.heading_en || 'Event Photo'}
-                            className="w-full h-24 object-cover rounded"
-                          />
-                          {photo.heading_en && (
-                            <p className="text-xs text-pink-800 mt-1 font-semibold">
-                              {photo.heading_en}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                  </div>
-                  {previewMedia.filter(m => m.type === 'photo').length > 4 && (
-                    <p className="text-sm text-gray-600">
-                      ...and {previewMedia.filter(m => m.type === 'photo').length - 4} more photos
+                  {/* Description 1 */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                    className="bg-white p-3 sm:p-6 rounded-lg shadow-md border "
+                  >
+                    <p className="text-sm sm:text-base text-purple-700 font-semibold truncate">
+                      {previewEvent.description1_en}
                     </p>
-                  )}
-                </div>
-              )}
+                  </motion.div>
 
-              {/* Video Section */}
-              {previewMedia.some(m => m.type === 'video') && (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold text-pink-800">
-                    {previewEvent.videoSubheading_en}
-                  </h2>
-                  
-                  {/* Interviews */}
-                  {previewMedia.some(m => m.type === 'video' && m.videoType === 'interview') && (
-                    <div>
-                      <h3 className="text-xl font-bold text-pink-700 mb-2">Interviews:-</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Description 2 */}
+                  {previewEvent.description2_en && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 }}
+                      className="bg-white p-3 sm:p-6 rounded-lg shadow-md border"
+                    >
+                      <p className="text-sm sm:text-base text-purple-700 font-semibold truncate">
+                        {previewEvent.description2_en}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {/* Photo Section */}
+                  {previewMedia.some(m => m.type === 'photo') && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.3 }}
+                      className="space-y-3 sm:space-y-4"
+                    >
+                      <h2 className="text-lg sm:text-2xl font-bold text-pink-800">
+                        {previewEvent.photoSubheading_en}
+                      </h2>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                         {previewMedia
-                          .filter(m => m.type === 'video' && m.videoType === 'interview')
-                          .slice(0, 2)
-                          .map((video) => (
-                            <div key={video.id} className="bg-white p-2 rounded-lg shadow-md">
-                              <div className="bg-gray-200 rounded aspect-video flex items-center justify-center">
-                                <Video className="w-12 h-12 text-gray-500" />
-                              </div>
-                              {video.heading_en && (
-                                <p className="text-sm text-pink-800 mt-2 font-semibold">
-                                  {video.heading_en}
+                          .filter(m => m.type === 'photo')
+                          .slice(0, 4)
+                          .map((photo, index) => (
+                            <motion.div 
+                              key={photo.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.2, delay: index * 0.1 }}
+                              whileHover={{ scale: 1.05 }}
+                              className="bg-white p-1 sm:p-2 rounded-lg shadow-md"
+                            >
+                              <img
+                                src={photo.url}
+                                alt={photo.heading_en || 'Event Photo'}
+                                className="w-full h-16 sm:h-24 object-cover rounded"
+                              />
+                              {photo.heading_en && (
+                                <p className="text-xs text-pink-800 mt-1 font-semibold truncate">
+                                  {photo.heading_en}
                                 </p>
                               )}
-                            </div>
+                            </motion.div>
                           ))}
                       </div>
-                    </div>
+                      {previewMedia.filter(m => m.type === 'photo').length > 4 && (
+                        <p className="text-xs sm:text-sm text-gray-600">
+                          ...and {previewMedia.filter(m => m.type === 'photo').length - 4} more photos
+                        </p>
+                      )}
+                    </motion.div>
                   )}
-                  
-                  {/* Distribution Videos */}
-                  {previewMedia.some(m => m.type === 'video' && m.videoType === 'distribution') && (
-                    <div>
-                      <h3 className="text-xl font-bold text-pink-700 mb-2">Distribution Coverage:-</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {previewMedia
-                          .filter(m => m.type === 'video' && m.videoType === 'distribution')
-                          .slice(0, 2)
-                          .map((video) => (
-                            <div key={video.id} className="bg-white p-2 rounded-lg shadow-md">
-                              <div className="bg-gray-200 rounded aspect-video flex items-center justify-center">
-                                <Video className="w-12 h-12 text-gray-500" />
-                              </div>
-                              {video.heading_en && (
-                                <p className="text-sm text-pink-800 mt-2 font-semibold">
-                                  {video.heading_en}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* No Media Message */}
-              {previewMedia.length === 0 && (
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600">No media uploaded for this event yet.</p>
-                  <p className="text-sm text-gray-500">Add photos and videos in the Media tab.</p>
+                  {/* Video Section - Similar responsive treatment */}
+                  {previewMedia.some(m => m.type === 'video') && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: 0.4 }}
+                      className="space-y-3 sm:space-y-4"
+                    >
+                      <h2 className="text-lg sm:text-2xl font-bold text-pink-800">
+                        {previewEvent.videoSubheading_en}
+                      </h2>
+                      
+                      {/* Video sections with responsive grid */}
+                      {previewMedia.some(m => m.type === 'video' && m.videoType === 'interview') && (
+                        <div>
+                          <h3 className="text-base sm:text-xl font-bold text-pink-700 mb-2">Interviews:-</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                            {previewMedia
+                              .filter(m => m.type === 'video' && m.videoType === 'interview')
+                              .slice(0, 2)
+                              .map((video, index) => (
+                                <motion.div 
+                                  key={video.id}
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ duration: 0.2, delay: index * 0.1 }}
+                                  whileHover={{ scale: 1.02 }}
+                                  className="bg-white p-1 sm:p-2 rounded-lg shadow-md"
+                                >
+                                  <div className="bg-gray-200 rounded aspect-video flex items-center justify-center">
+                                    <Video className="w-8 h-8 sm:w-12 sm:h-12 text-gray-500" />
+                                  </div>
+                                  {video.heading_en && (
+                                    <p className="text-xs sm:text-sm text-pink-800 mt-2 font-semibold">
+                                      {video.heading_en}
+                                    </p>
+                                  )}
+                                </motion.div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* No Media Message */}
+                  {previewMedia.length === 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 0.5 }}
+                      className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg"
+                    >
+                      <ImageIcon className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm sm:text-base text-gray-600">No media uploaded for this event yet.</p>
+                      <p className="text-xs sm:text-sm text-gray-500">Add photos and videos in the Media tab.</p>
+                    </motion.div>
+                  )}
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Create/Edit Form */}
-      {isCreating && (
-        <Card className="border-pink-200">
-          <CardHeader className="bg-pink-50">
-            <CardTitle className="text-pink-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              {editingId ? 'Edit Event' : 'Create New Event'}
-            </CardTitle>
-            <CardDescription>
-              Create event pages with bilingual content. Auto-translation available.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {/* Language Selection & Translation */}
-            <div className="flex items-center gap-4">
-              <Label>Primary Language:</Label>
-              <Select value={sourceLang} onValueChange={(value: 'en' | 'hi') => setSourceLang(value)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="hi">Hindi</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAutoTranslate}
-                disabled={isTranslating}
-                className="border-pink-300 text-pink-700 hover:bg-pink-50"
-              >
-                {isTranslating ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Languages className="w-4 h-4 mr-2" />
-                )}
-                Auto Translate
-              </Button>
-            </div>
-
-            {/* Slug Field with Suggestions */}
-            <div className="space-y-2">
-              <Label htmlFor="slug">Event Slug (URL)</Label>
-              
-              {availablePostSlugs.length > 0 && (
-                <div className="mb-3">
-                  <Label className="text-sm text-blue-700 mb-2 block">📋 Suggested slugs from your posts:</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {availablePostSlugs.map((postSlug) => (
-                      <Button
-                        key={postSlug.id}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setFormData(prev => ({ ...prev, slug: postSlug.eventPageSlug }))}
-                        className="justify-start text-left border-blue-200 text-blue-700 hover:bg-blue-50 h-auto p-2"
-                      >
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium text-xs">{postSlug.title_en}</span>
-                          <code className="text-xs text-blue-600 bg-blue-100 px-1 rounded mt-1">
-                            {postSlug.eventPageSlug}
-                          </code>
-                        </div>
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="text-xs text-blue-600 mt-2 bg-blue-50 p-2 rounded border border-blue-200">
-                    💡 Click any suggested slug above to use it, or type your own below
-                  </div>
-                </div>
-              )}
-
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                placeholder="event-name (or select from suggestions above)"
-                className="border-pink-200 focus:border-pink-400"
-              />
-              <p className="text-xs text-pink-600">
-                URL will be: /events/{formData.slug}
-              </p>
-              
-              {/* Show if slug matches a post */}
-              {availablePostSlugs.some(ps => ps.eventPageSlug === formData.slug) && (
-                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-700">
-                    ✅ This slug matches a post with "Know More" button: 
-                    <span className="font-medium">
-                      {availablePostSlugs.find(ps => ps.eventPageSlug === formData.slug)?.title_en}
-                    </span>
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Heading Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="heading_en">Event Heading (English)</Label>
-                <Input
-                  id="heading_en"
-                  value={formData.heading_en}
-                  onChange={(e) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      heading_en: e.target.value,
-                      slug: prev.slug || generateSlug(e.target.value)
-                    }));
-                  }}
-                  placeholder="Enter English heading"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="heading_hi">Event Heading (Hindi)</Label>
-                <Input
-                  id="heading_hi"
-                  value={formData.heading_hi}
-                  onChange={(e) => setFormData(prev => ({ ...prev, heading_hi: e.target.value }))}
-                  placeholder="Enter Hindi heading"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-            </div>
-
-            {/* Description 1 Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="desc1_en">Description 1 (English)</Label>
-                <Textarea
-                  id="desc1_en"
-                  value={formData.description1_en}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description1_en: e.target.value }))}
-                  placeholder="Enter first description paragraph"
-                  className="border-pink-200 focus:border-pink-400 min-h-24"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="desc1_hi">Description 1 (Hindi)</Label>
-                <Textarea
-                  id="desc1_hi"
-                  value={formData.description1_hi}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description1_hi: e.target.value }))}
-                  placeholder="Enter first description paragraph in Hindi"
-                  className="border-pink-200 focus:border-pink-400 min-h-24"
-                />
-              </div>
-            </div>
-
-            {/* Description 2 Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="desc2_en">Description 2 (English)</Label>
-                <Textarea
-                  id="desc2_en"
-                  value={formData.description2_en}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description2_en: e.target.value }))}
-                  placeholder="Enter second description paragraph (optional)"
-                  className="border-pink-200 focus:border-pink-400 min-h-24"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="desc2_hi">Description 2 (Hindi)</Label>
-                <Textarea
-                  id="desc2_hi"
-                  value={formData.description2_hi}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description2_hi: e.target.value }))}
-                  placeholder="Enter second description paragraph in Hindi (optional)"
-                  className="border-pink-200 focus:border-pink-400 min-h-24"
-                />
-              </div>
-            </div>
-
-            {/* Section Headings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="photo_heading_en">Photo Section Heading (English)</Label>
-                <Input
-                  id="photo_heading_en"
-                  value={formData.photoSubheading_en}
-                  onChange={(e) => setFormData(prev => ({ ...prev, photoSubheading_en: e.target.value }))}
-                  placeholder="Photo/News Coverage:-"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="photo_heading_hi">Photo Section Heading (Hindi)</Label>
-                <Input
-                  id="photo_heading_hi"
-                  value={formData.photoSubheading_hi}
-                  onChange={(e) => setFormData(prev => ({ ...prev, photoSubheading_hi: e.target.value }))}
-                  placeholder="फोटो/समाचार कवरेज:-"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="video_heading_en">Video Section Heading (English)</Label>
-                <Input
-                  id="video_heading_en"
-                  value={formData.videoSubheading_en}
-                  onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_en: e.target.value }))}
-                  placeholder="Video Coverage:-"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="video_heading_hi">Video Section Heading (Hindi)</Label>
-                <Input
-                  id="video_heading_hi"
-                  value={formData.videoSubheading_hi}
-                  onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_hi: e.target.value }))}
-                  placeholder="वीडियो कवरेज:-"
-                  className="border-pink-200 focus:border-pink-400"
-                />
-              </div>
-            </div>
-
-            {/* Active Toggle */}
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
-              />
-              <Label>Active Event</Label>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={isTranslating}
-                className="bg-pink-600 hover:bg-pink-700 text-white"
-              >
-                {isTranslating ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Save Event
-              </Button>
-              <Button
-                variant="outline"
-                onClick={resetForm}
-                className="border-pink-300 text-pink-700 hover:bg-pink-50"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-            </div>
-
-            {/* Preview Button in Form */}
-            {(formData.heading_en || formData.heading_hi) && (
-              <div className="pt-4 border-t border-pink-200">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const previewData: Event = {
-                      id: editingId || 0,
-                      slug: formData.slug || '',
-                      heading_en: formData.heading_en || '',
-                      heading_hi: formData.heading_hi || '',
-                      description1_en: formData.description1_en || '',
-                      description1_hi: formData.description1_hi || '',
-                      description2_en: formData.description2_en || '',
-                      description2_hi: formData.description2_hi || '',
-                      photoSubheading_en: formData.photoSubheading_en || 'Photo/News Coverage:-',
-                      photoSubheading_hi: formData.photoSubheading_hi || 'फोटो/समाचार कवरेज:-',
-                      videoSubheading_en: formData.videoSubheading_en || 'Video Coverage:-',
-                      videoSubheading_hi: formData.videoSubheading_hi || 'वीडियो कवरेज:-',
-                      isActive: formData.isActive || true,
-                    };
-                    setPreviewEventId(previewData.id ?? null);
-                    setShowPreview(true);
-                  }}
-                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview This Event
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Events List */}
-      <div className="grid gap-4">
-        {events.map((event) => {
-          // Find posts that link to this event
-          const connectedPosts = linkedPosts.filter(post => post.eventPageSlug === event.slug);
-          
-          return (
-            <Card key={event.id} className="border-pink-200">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-pink-900">{event.heading_en}</h3>
-                      <Badge variant={event.isActive ? "default" : "secondary"} className="bg-pink-100 text-pink-800">
-                        {event.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                      {connectedPosts.length > 0 && (
-                        <Badge variant="outline" className="border-green-300 text-green-700">
-                          🔗 {connectedPosts.length} post{connectedPosts.length !== 1 ? 's' : ''} linked
-                        </Badge>
+      <AnimatePresence>
+        {isCreating && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border-pink-200">
+              <CardHeader id='edit-event'>
+                <CardTitle className="text-pink-900 flex items-center gap-2 text-base sm:text-lg">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {editingId ? 'Edit Event' : 'Create New Event'}
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Create event pages with bilingual content. Auto-translation available.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
+                {/* Language Selection & Translation */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <Label className="text-sm">Primary Language:</Label>
+                  <Select value={sourceLang} onValueChange={(value: 'en' | 'hi') => setSourceLang(value)}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="hi">Hindi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full sm:w-auto"
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAutoTranslate}
+                      disabled={isTranslating}
+                      className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
+                    >
+                      {isTranslating ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Languages className="w-4 h-4 mr-2" />
                       )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{event.description1_en}</p>
-                    <p className="text-xs text-pink-600 mb-2">Slug: /events/{event.slug}</p>
-                    
-                    {/* Show connected posts */}
-                    {connectedPosts.length > 0 && (
-                      <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                        <p className="text-xs font-semibold text-green-800 mb-2">
-                          Posts linking to this event:
-                        </p>
-                        <div className="space-y-1">
-                          {connectedPosts.map(post => (
-                            <div key={post.id} className="flex items-center gap-2 text-xs">
-                              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                              <span className="text-green-700 font-medium">{post.title_en}</span>
-                              <span className="text-green-600">→ has "Know More" button</span>
-                            </div>
-                          ))}
+                      Auto Translate
+                    </Button>
+                  </motion.div>
+                </div>
+
+                {/* Slug Field with Dropdown - Made responsive */}
+                <div className="space-y-2">
+                  <Label htmlFor="slug" className="text-sm">Event Slug (URL)</Label>
+                  
+                  {availablePostSlugs.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="mb-3"
+                    >
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                        <div className="flex-1">
+                          <Label className="text-xs sm:text-sm text-blue-700 mb-1 block">📋 Use slug from your posts:</Label>
+                          <Select
+                            value={formData.slug || ""}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, slug: value }))}
+                          >
+                            <SelectTrigger className="border-blue-200 focus:border-blue-400 w-full">
+                              <SelectValue 
+                                placeholder="Select a slug from your posts..." 
+                                className="truncate block w-full text-left overflow-hidden"
+                              />
+                            </SelectTrigger>
+                            <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] sm:max-w-none">
+                              {availablePostSlugs.map((postSlug) => (
+                                <SelectItem key={postSlug.id} value={postSlug.eventPageSlug}>
+                                  <div className="flex flex-col items-start w-full min-w-0">
+                                    <span className="font-medium text-sm w-full truncate">{postSlug.title_en}</span>
+                                    <code className="text-xs text-blue-600  px-1 rounded w-full truncate">
+                                      {postSlug.eventPageSlug}
+                                    </code>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFormData(prev => ({ ...prev, slug: '' }))}
+                              className="border-red-600 bg-red-500 text-white hover:bg-gradient-to-r from-red-500 to-red-700 hover:text-white cursor-pointer"
+                            >
+                              Clear Slug
+                            </Button>
+                          </motion.div>
                         </div>
                       </div>
-                    )}
+                      <div className="text-xs text-blue-600 mt-2 bg-blue-50 p-2 rounded border border-blue-200">
+                        💡 Select a slug from posts with "Know More" buttons, or type your own below
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <Input
+                    id="slug"
+                    value={formData.slug}
+                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                    placeholder="event-name (or select from dropdown above)"
+                    className="border-pink-200 focus:border-pink-400 text-sm"
+                  />
+                  <p className="text-xs text-pink-600">
+                    URL will be: sitaramsevasansthan.org/events/{formData.slug}
+                  </p>
+                  
+      
+                </div>
+
+                {/* Responsive Form Fields */}
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Heading Fields */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="heading_en" className="text-sm">Event Heading (English)</Label>
+                      <Input
+                        id="heading_en"
+                        value={formData.heading_en}
+                        onChange={(e) => {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            heading_en: e.target.value,
+                            slug: prev.slug || generateSlug(e.target.value)
+                          }));
+                        }}
+                        placeholder="Enter English heading"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="heading_hi" className="text-sm">Event Heading (Hindi)</Label>
+                      <Input
+                        id="heading_hi"
+                        value={formData.heading_hi}
+                        onChange={(e) => setFormData(prev => ({ ...prev, heading_hi: e.target.value }))}
+                        placeholder="Enter Hindi heading"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePreview(event)}
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+
+                  {/* Description Fields - Made responsive */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="desc1_en" className="text-sm">Description 1 (English)</Label>
+                      <Textarea
+                        id="desc1_en"
+                        value={formData.description1_en}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description1_en: e.target.value }))}
+                        placeholder="Enter first description paragraph"
+                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="desc1_hi" className="text-sm">Description 1 (Hindi)</Label>
+                      <Textarea
+                        id="desc1_hi"
+                        value={formData.description1_hi}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description1_hi: e.target.value }))}
+                        placeholder="Enter first description paragraph in Hindi"
+                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description 2 Fields */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="desc2_en" className="text-sm">Description 2 (English)</Label>
+                      <Textarea
+                        id="desc2_en"
+                        value={formData.description2_en}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description2_en: e.target.value }))}
+                        placeholder="Enter second description paragraph (optional)"
+                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="desc2_hi" className="text-sm">Description 2 (Hindi)</Label>
+                      <Textarea
+                        id="desc2_hi"
+                        value={formData.description2_hi}
+                        onChange={(e) => setFormData(prev => ({ ...prev, description2_hi: e.target.value }))}
+                        placeholder="Enter second description paragraph in Hindi (optional)"
+                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section Headings */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="photo_heading_en" className="text-sm">Photo Section Heading (English)</Label>
+                      <Input
+                        id="photo_heading_en"
+                        value={formData.photoSubheading_en}
+                        onChange={(e) => setFormData(prev => ({ ...prev, photoSubheading_en: e.target.value }))}
+                        placeholder="Photo/News Coverage:-"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="photo_heading_hi" className="text-sm">Photo Section Heading (Hindi)</Label>
+                      <Input
+                        id="photo_heading_hi"
+                        value={formData.photoSubheading_hi}
+                        onChange={(e) => setFormData(prev => ({ ...prev, photoSubheading_hi: e.target.value }))}
+                        placeholder="फोटो/समाचार कवरेज:-"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="video_heading_en" className="text-sm">Video Section Heading (English)</Label>
+                      <Input
+                        id="video_heading_en"
+                        value={formData.videoSubheading_en}
+                        onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_en: e.target.value }))}
+                        placeholder="Video Coverage:-"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="video_heading_hi" className="text-sm">Video Section Heading (Hindi)</Label>
+                      <Input
+                        id="video_heading_hi"
+                        value={formData.videoSubheading_hi}
+                        onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_hi: e.target.value }))}
+                        placeholder="वीडियो कवरेज:-"
+                        className="border-pink-200 focus:border-pink-400 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Active Toggle */}
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={formData.isActive}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+                    />
+                    <Label className="text-sm">Active Event</Label>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full sm:w-auto"
                     >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(`https://sitaramsevasansthan.org/events/${event.slug}`, '_blank')}
-                      className="border-green-300 text-green-700 hover:bg-green-50"
+                      <Button
+                        onClick={handleSave}
+                        disabled={isTranslating}
+                        className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
+                      >
+                        {isTranslating ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Save Event
+                      </Button>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full sm:w-auto"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(event)}
-                      className="border-pink-300 text-pink-700 hover:bg-pink-50"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(event.id!)}
-                      className="border-red-300 text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      <Button
+                        variant="outline"
+                        onClick={resetForm}
+                        className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Events List - Made responsive */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="grid gap-3 sm:gap-4"
+      >
+        {events.map((event, index) => {
+          const connectedPosts = linkedPosts.filter(post => post.eventPageSlug === event.slug);
+          
+          return (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.05 }}
+              whileHover={{ scale: 1.01 }}
+              className='min-w-0'
+            >
+              <Card className="border-pink-500  ">
+                <CardContent className="p-5 sm:p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-wrap text-pink-900 text-xs sm:text-base truncate">{event.heading_en}</h3>
+                        <div className="flex flex-wrap gap-1 sm:gap-2">
+                          <Badge variant={event.isActive ? "default" : "secondary"} className="bg-pink-100 text-pink-800 text-xs">
+                            {event.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {connectedPosts.length > 0 && (
+                            <Badge variant="outline" className="border-green-300 text-green-700 text-xs">
+                              🔗 {connectedPosts.length} post{connectedPosts.length !== 1 ? 's' : ''} linked
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-1 text-wrap">{event.description1_en}</p>
+                      <p className="text-xs text-pink-600 mb-2">Link-sitaramsevasansthan.org/events/{event.slug}</p>
+                      
+                      {/* Show connected posts */}
+                      <AnimatePresence>
+                        {connectedPosts.length > 0 && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="mt-3 p-2 sm:p-3 bg-green-50 rounded-lg border border-green-200"
+                          >
+                            <p className="text-xs font-semibold text-green-800 mb-2">
+                               Title of Post linking to this event-
+                            </p>
+                            <div className="space-y-1">
+                              {connectedPosts.map(post => (
+                                <div key={post.id} className="flex items-center gap-2 text-xs">
+                                  <span className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></span>
+                                  <span className="text-green-700 font-medium truncate">{post.title_en}</span>
+                                
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    
+                    {/* Action Buttons - Responsive layout */}
+                    <div className="flex flex-row lg:flex-col gap-1 sm:gap-2 justify-end lg:justify-start">
+                     <Link href="#live-eventpreview">
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                       
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePreview(event)}
+                            className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
+                          
+                          > 
+                            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                         
+                          </Button>
+                        
+                      </motion.div>
+                       </Link>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`https://sitaramsevasansthan.org/events/${event.slug}`, '_blank')}
+                          className="border-green-300 text-green-700 hover:bg-green-50 p-2"
+                        >
+                          <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </motion.div>
+                      <Link href="#edit-event">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(event)}
+                            className="border-pink-300 text-pink-700 hover:bg-pink-50 p-2"
+                          >
+                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </Button>
+                        </motion.div>
+                      </Link>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(event.id!)}
+                          className="border-red-300 text-red-700 hover:bg-red-50 p-2"
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }
