@@ -68,10 +68,10 @@ export default function Dashboard() {
           transition={{ duration: 0.4, delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-white border-2 border-r-4 border-b-4 border-pink-700 shadow-sm h-auto p-1">
+            <TabsList className="grid w-full grid-cols-3 bg-white border-2 border-r-4 border-b-4 border-pink-700 shadow-sm h-auto p-1 ">
               <TabsTrigger 
                 value="posts" 
-                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
               >
                 <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Posts</span>
@@ -79,7 +79,7 @@ export default function Dashboard() {
               </TabsTrigger>
               <TabsTrigger 
                 value="events"
-                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
               >
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Events</span>
@@ -87,7 +87,7 @@ export default function Dashboard() {
               </TabsTrigger>
               <TabsTrigger 
                 value="media"
-                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
               >
                 <Image className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Event's Media</span>
