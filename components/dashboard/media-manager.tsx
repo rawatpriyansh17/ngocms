@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,9 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Loader2, Languages, Image as ImageIcon, Video, Play, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, Image as ImageIcon, Video, Play, GripVertical } from 'lucide-react';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
-import { useTranslation } from '@/hooks/useTranslation';
 import { upload } from '@imagekit/next';
 import Image from 'next/image';
 
@@ -23,9 +22,7 @@ interface Media {
   url: string;
   thumbnailUrl?: string;
   heading_en?: string;
-  heading_hi?: string;
   description_en?: string;
-  description_hi?: string;
   videoType?: 'interview' | 'distribution';
   order: number;
 }
@@ -45,23 +42,18 @@ export default function MediaManager() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const { translateContent, isTranslating } = useTranslation();
-
   const [formData, setFormData] = useState<Partial<Media>>({
     type: 'photo',
     url: '',
     thumbnailUrl: '',
     heading_en: '',
-    heading_hi: '',
     description_en: '',
-    description_hi: '',
     videoType: 'interview',
     order: 0,
   });
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [sourceLang, setSourceLang] = useState<'en' | 'hi'>('en');
 
   const [showThumbnailSelector, setShowThumbnailSelector] = useState(false);
   const [availableVideoThumbnails] = useState([
@@ -108,12 +100,15 @@ export default function MediaManager() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, []);
 
   useEffect(() => {
     if (selectedEventId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchMedia(selectedEventId);
     }
   }, [selectedEventId]);
@@ -203,23 +198,6 @@ export default function MediaManager() {
     setFormData(prev => ({ ...prev, url: '' }));
   };
 
-  // Auto-translate content
-  const handleAutoTranslate = async () => {
-    if (!formData.heading_en && !formData.heading_hi) return;
-
-    try {
-      const content = {
-        heading: sourceLang === 'en' ? formData.heading_en : formData.heading_hi,
-        description: sourceLang === 'en' ? formData.description_en : formData.description_hi,
-      };
-
-      const translated = await translateContent(content, sourceLang);
-      setFormData(prev => ({ ...prev, ...translated }));
-    } catch (error) {
-      console.error('Translation failed:', error);
-    }
-  };
-
   // Save media
   const handleSave = async () => {
     if (!selectedEventId) return;
@@ -266,9 +244,7 @@ export default function MediaManager() {
       url: '',
       thumbnailUrl: '',
       heading_en: '',
-      heading_hi: '',
       description_en: '',
-      description_hi: '',
       videoType: 'interview',
       order: 0,
     });
@@ -315,7 +291,7 @@ export default function MediaManager() {
         className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4"
       >
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-pink-900">Event's Media Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-pink-900">Event Media Management</h2>
           <p className="text-sm sm:text-base text-pink-700">Drag media to reorder • Auto-saves order changes</p>
         </div>
       </motion.div>
@@ -429,44 +405,10 @@ export default function MediaManager() {
                         {editingId ? 'Edit Media' : 'Add New Media'}
                       </CardTitle>
                       <CardDescription className="text-xs sm:text-sm">
-                        Upload and manage media content with bilingual descriptions
+                        Upload and manage media content with English descriptions
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-                      {/* Language Selection & Translation */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                        <Label className="text-sm">Primary Language:</Label>
-                        <Select value={sourceLang} onValueChange={(value: 'en' | 'hi') => setSourceLang(value)}>
-                          <SelectTrigger className="w-full sm:w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="hi">Hindi</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="w-full sm:w-auto"
-                        >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleAutoTranslate}
-                            disabled={isTranslating}
-                            className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
-                          >
-                            {isTranslating ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <Languages className="w-4 h-4 mr-2" />
-                            )}
-                            Auto Translate
-                          </Button>
-                        </motion.div>
-                      </div>
-
                       {/* Media Upload with Preview */}
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
@@ -625,14 +567,14 @@ export default function MediaManager() {
                       </motion.div>
 
                       {/* Heading Fields */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <motion.div 
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.2, delay: 0.3 }}
                           className="space-y-2"
                         >
-                          <Label htmlFor="heading_en" className="text-sm">Heading (English)</Label>
+                          <Label htmlFor="heading_en" className="text-sm">Heading  </Label>
                           <Input
                             id="heading_en"
                             value={formData.heading_en}
@@ -641,52 +583,22 @@ export default function MediaManager() {
                             className="border-pink-200 focus:border-pink-400 text-sm"
                           />
                         </motion.div>
-                        <motion.div 
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.2, delay: 0.4 }}
-                          className="space-y-2"
-                        >
-                          <Label htmlFor="heading_hi" className="text-sm">Heading (Hindi)</Label>
-                          <Input
-                            id="heading_hi"
-                            value={formData.heading_hi}
-                            onChange={(e) => setFormData(prev => ({ ...prev, heading_hi: e.target.value }))}
-                            placeholder="Enter Hindi heading"
-                            className="border-pink-200 focus:border-pink-400 text-sm"
-                          />
-                        </motion.div>
                       </div>
 
                       {/* Description Fields */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <motion.div 
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.2, delay: 0.5 }}
                           className="space-y-2"
                         >
-                          <Label htmlFor="desc_en" className="text-sm">Description (English)</Label>
+                          <Label htmlFor="desc_en" className="text-sm">Description  </Label>
                           <Textarea
                             id="desc_en"
                             value={formData.description_en}
                             onChange={(e) => setFormData(prev => ({ ...prev, description_en: e.target.value }))}
                             placeholder="Enter English description"
-                            className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
-                          />
-                        </motion.div>
-                        <motion.div 
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.2, delay: 0.6 }}
-                          className="space-y-2"
-                        >
-                          <Label htmlFor="desc_hi" className="text-sm">Description (Hindi)</Label>
-                          <Textarea
-                            id="desc_hi"
-                            value={formData.description_hi}
-                            onChange={(e) => setFormData(prev => ({ ...prev, description_hi: e.target.value }))}
-                            placeholder="Enter Hindi description"
                             className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
                           />
                         </motion.div>
@@ -863,9 +775,9 @@ export default function MediaManager() {
                           whileTap={{ scale: 0.98 }}
                           className="w-full sm:w-auto"
                         >
-                          <Button
-                            onClick={handleSave}
-                            disabled={uploadingFile || isTranslating}
+                            <Button
+                              onClick={handleSave}
+                            disabled={uploadingFile}
                             className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
                           >
                             {uploadingFile ? (
@@ -931,22 +843,28 @@ export default function MediaManager() {
                         ) : (
                           media.map((mediaItem, index) => (
                             <Draggable key={mediaItem.id} draggableId={mediaItem.id!.toString()} index={index}>
-                              {(provided, snapshot) => (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                                  whileHover={{ scale: 1.01 }}
+                              {(provided, snapshot) => {
+                                const { style, ...draggableProps } = provided.draggableProps;
+
+                                return (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...draggableProps}
+                                  style={style as CSSProperties | undefined}
                                 >
-                                  <Card
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`border-pink-200 transition-shadow ${
-                                      snapshot.isDragging ? 'shadow-lg' : ''
-                                    }`}
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                                    whileHover={{ scale: 1.01 }}
                                   >
-                                    <CardContent className="p-3 sm:p-4">
-                                      <div className="flex  lg:items-start gap-2 lg:gap-4">
+                                    <Card
+                                      className={`border-pink-200 transition-shadow ${
+                                        snapshot.isDragging ? 'shadow-lg' : ''
+                                      }`}
+                                    >
+                                      <CardContent className="p-3 sm:p-4">
+                                        <div className="flex  lg:items-start gap-2 lg:gap-4">
                                         {/* Drag Handle */}
                                         <div
                                           {...provided.dragHandleProps}
@@ -1042,11 +960,12 @@ export default function MediaManager() {
                                             </Button>
                                           </motion.div>
                                         </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </motion.div>
-                              )}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  </motion.div>
+                                </div>
+                              )}}
                             </Draggable>
                           ))
                         )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,18 +11,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Loader2, Languages, Eye, GripVertical, Play, Calendar, ExternalLink, Video } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, Eye, GripVertical, Play, Calendar, ExternalLink, Video } from 'lucide-react';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
-import { useTranslation } from '@/hooks/useTranslation';
 import { upload } from '@imagekit/next';
 import { Image } from '@imagekit/next';
 import Link from 'next/link';
 interface Post {
   id?: number;
   title_en: string;
-  title_hi: string;
   description_en: string;
-  description_hi: string;
   mediaType: 'image' | 'video';
   mediaUrl: string;
   thumbnailUrl?: string;
@@ -46,13 +43,9 @@ export default function PostsManager() {
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const { translateContent, isTranslating } = useTranslation();
-
   const [formData, setFormData] = useState<Partial<Post>>({
     title_en: '',
-    title_hi: '',
     description_en: '',
-    description_hi: '',
     mediaType: 'image',
     mediaUrl: '',
     thumbnailUrl: '',
@@ -63,7 +56,6 @@ export default function PostsManager() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [sourceLang, setSourceLang] = useState<'en' | 'hi'>('en');
   const [previewPost, setPreviewPost] = useState<Post | null>(null);
   const [showThumbnailSelector, setShowThumbnailSelector] = useState(false);
   const [availableThumbnails] = useState([
@@ -110,7 +102,9 @@ export default function PostsManager() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPosts();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, []);
 
@@ -201,22 +195,6 @@ export default function PostsManager() {
     setFormData(prev => ({ ...prev, mediaUrl: '' }));
   };
 
-  const handleAutoTranslate = async () => {
-    if (!formData.title_en && !formData.title_hi) return;
-
-    try {
-      const content = {
-        title: sourceLang === 'en' ? formData.title_en : formData.title_hi,
-        description: sourceLang === 'en' ? formData.description_en : formData.description_hi,
-      };
-
-      const translated = await translateContent(content, sourceLang);
-      setFormData(prev => ({ ...prev, ...translated }));
-    } catch (error) {
-      console.error('Translation failed:', error);
-    }
-  };
-
   const handleSave = async () => {
     try {
       setUploadingFile(true);
@@ -256,9 +234,7 @@ export default function PostsManager() {
   const resetForm = () => {
     setFormData({
       title_en: '',
-      title_hi: '',
       description_en: '',
-      description_hi: '',
       mediaType: 'image',
       mediaUrl: '',
       thumbnailUrl: '',
@@ -458,53 +434,19 @@ export default function PostsManager() {
                   {editingId ? 'Edit Post' : 'Create New Post'}
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Fill in the details for your post. Auto-translation available.
+                  Fill in the details for your post.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-                {/* Language Selection */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <Label className="text-sm">Primary Language:</Label>
-                  <Select value={sourceLang} onValueChange={(value: 'en' | 'hi') => setSourceLang(value)}>
-                    <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="hi">Hindi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full sm:w-auto"
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAutoTranslate}
-                      disabled={isTranslating}
-                      className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
-                    >
-                      {isTranslating ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Languages className="w-4 h-4 mr-2" />
-                      )}
-                      Auto Translate
-                    </Button>
-                  </motion.div>
-                </div>
-
                 {/* Title Fields */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <motion.div 
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2, delay: 0.1 }}
                     className="space-y-2"
                   >
-                    <Label htmlFor="title_en" className="text-sm">Title (English)</Label>
+                    <Label htmlFor="title_en" className="text-sm">Title  </Label>
                     <Input
                       id="title_en"
                       value={formData.title_en}
@@ -513,52 +455,22 @@ export default function PostsManager() {
                       className="border-pink-200 focus:border-pink-400 text-sm"
                     />
                   </motion.div>
-                  <motion.div 
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, delay: 0.2 }}
-                    className="space-y-2"
-                  >
-                    <Label htmlFor="title_hi" className="text-sm">Title (Hindi)</Label>
-                    <Input
-                      id="title_hi"
-                      value={formData.title_hi}
-                      onChange={(e) => setFormData(prev => ({ ...prev, title_hi: e.target.value }))}
-                      placeholder="Enter Hindi title"
-                      className="border-pink-200 focus:border-pink-400 text-sm"
-                    />
-                  </motion.div>
                 </div>
 
                 {/* Description Fields */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <motion.div 
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2, delay: 0.3 }}
                     className="space-y-2"
                   >
-                    <Label htmlFor="desc_en" className="text-sm">Description (English)</Label>
+                    <Label htmlFor="desc_en" className="text-sm">Description  </Label>
                     <Textarea
                       id="desc_en"
                       value={formData.description_en}
                       onChange={(e) => setFormData(prev => ({ ...prev, description_en: e.target.value }))}
                       placeholder="Enter English description"
-                      className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
-                    />
-                  </motion.div>
-                  <motion.div 
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, delay: 0.4 }}
-                    className="space-y-2"
-                  >
-                    <Label htmlFor="desc_hi" className="text-sm">Description (Hindi)</Label>
-                    <Textarea
-                      id="desc_hi"
-                      value={formData.description_hi}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description_hi: e.target.value }))}
-                      placeholder="Enter Hindi description"
                       className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
                     />
                   </motion.div>
@@ -814,7 +726,7 @@ export default function PostsManager() {
                       }}
                     />
                     <Label className="text-pink-800 font-medium text-sm">
-                      Add "Know More" button that links to an event page
+                      Add &quot;Know More&quot; button that links to an event page
                     </Label>
                   </div>
 
@@ -856,7 +768,7 @@ export default function PostsManager() {
 
                         <div className="flex items-center gap-2 p-2 bg-white border border-green-200 rounded">
                           <span className="text-xs sm:text-sm text-green-700">
-                            ✅ This post will show a "Know More" button → leads to event page
+                            ✅ This post will show a &quot;Know More&quot; button → leads to event page
                           </span>
                         </div>
 
@@ -870,7 +782,7 @@ export default function PostsManager() {
                   {/* Help text when disabled */}
                   {!formData.eventPageSlug && (
                     <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-200">
-                      ℹ️ When enabled, this post will have a "Know More" button that links to a detailed event page
+                      ℹ️ When enabled, this post will have a &quot;Know More&quot; button that links to a detailed event page
                     </div>
                   )}
                 </motion.div>
@@ -901,9 +813,9 @@ export default function PostsManager() {
                     whileTap={{ scale: 0.98 }}
                     className="w-full sm:w-auto"
                   >
-                    <Button
-                      onClick={handleSave}
-                      disabled={uploadingFile || isTranslating}
+                      <Button
+                        onClick={handleSave}
+                      disabled={uploadingFile}
                       className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
                     >
                       {uploadingFile ? (
@@ -932,7 +844,7 @@ export default function PostsManager() {
 
                 {/* Preview Button in Form */}
                 <AnimatePresence>
-                  {(formData.title_en || formData.title_hi) && formData.mediaUrl && 
+                  {formData.title_en && formData.mediaUrl && 
                    (formData.mediaType === 'image' || (formData.mediaType === 'video' && formData.thumbnailUrl)) && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
@@ -952,9 +864,7 @@ export default function PostsManager() {
                               const previewData: Post = {
                                 id: editingId || 0,
                                 title_en: formData.title_en || '',
-                                title_hi: formData.title_hi || '',
                                 description_en: formData.description_en || '',
-                                description_hi: formData.description_hi || '',
                                 mediaType: formData.mediaType || 'image',
                                 mediaUrl: formData.mediaUrl || '',
                                 thumbnailUrl: formData.thumbnailUrl,
@@ -992,22 +902,28 @@ export default function PostsManager() {
               <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3 sm:space-y-4">
                 {posts.map((post, index) => (
                   <Draggable key={post.id} draggableId={post.id!.toString()} index={index}>
-                    {(provided, snapshot) => (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: index * 0.05 }}
-                        whileHover={{ scale: 1.01 }}
+                    {(provided, snapshot) => {
+                      const { style, ...draggableProps } = provided.draggableProps;
+
+                      return (
+                      <div
+                        ref={provided.innerRef}
+                        {...draggableProps}
+                        style={style as CSSProperties | undefined}
                       >
-                        <Card
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`border-pink-200 transition-shadow ${
-                            snapshot.isDragging ? 'shadow-lg' : ''
-                          }`}
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                          whileHover={{ scale: 1.01 }}
                         >
-                          <CardContent className="p-3 sm:p-4">
-                            <div className="flex  lg:items-start gap-3 lg:gap-4">
+                          <Card
+                            className={`border-pink-200 transition-shadow ${
+                              snapshot.isDragging ? 'shadow-lg' : ''
+                            }`}
+                          >
+                            <CardContent className="p-3 sm:p-4">
+                              <div className="flex  lg:items-start gap-3 lg:gap-4">
                               {/* Drag Handle */}
                               <div
                                 {...provided.dragHandleProps}
@@ -1079,11 +995,12 @@ export default function PostsManager() {
                                   </Button>
                                 </motion.div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      </div>
+                    )}}
                   </Draggable>
                 ))}
                 {provided.placeholder}

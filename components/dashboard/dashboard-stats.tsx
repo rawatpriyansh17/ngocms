@@ -2,16 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, Image } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { FileText, Calendar } from 'lucide-react';
 
 export default function DashboardStats() {
+  type EventSummary = {
+    isActive: boolean;
+  };
+
   const [stats, setStats] = useState({
     posts: 0,
     events: 0,
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     async function fetchStats() {
       try {
         const [postsRes, eventsRes] = await Promise.all([
@@ -24,7 +29,7 @@ export default function DashboardStats() {
 
         setStats({
           posts: posts.length || 0,
-          events: events.filter((e: any) => e.isActive).length || 0,
+          events: events.filter((event: EventSummary) => event.isActive).length || 0,
         });
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -40,7 +45,7 @@ export default function DashboardStats() {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-8">
+    <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-8">
       <motion.div
         variants={cardVariants}
         initial="hidden"
@@ -61,12 +66,6 @@ export default function DashboardStats() {
                   {stats.posts}
                 </motion.p>
               </div>
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
-              </motion.div>
             </div>
           </CardContent>
         </Card>
@@ -82,7 +81,7 @@ export default function DashboardStats() {
           <CardContent className="py-1 sm:py-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-pink-700">Active Events</p>
+                <p className="text-xs sm:text-sm font-medium text-pink-700">Event Pages</p>
                 <motion.p 
                   className="text-xl sm:text-2xl font-bold text-pink-900"
                   initial={{ scale: 0.8 }}
@@ -92,12 +91,6 @@ export default function DashboardStats() {
                   {stats.events}
                 </motion.p>
               </div>
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-pink-600" />
-              </motion.div>
             </div>
           </CardContent>
         </Card>

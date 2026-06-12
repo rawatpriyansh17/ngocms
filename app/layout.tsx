@@ -3,7 +3,7 @@ import {
   ClerkProvider,
 } from '@clerk/nextjs'
 import { Geist, Geist_Mono,Poppins,DM_Sans } from 'next/font/google'
-import './globals.css'
+import '@/app/globals.css'
 import { Toaster } from 'sonner'
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -39,6 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+   afterSignOutUrl="/"
    appearance={{
     variables: {
       colorPrimary:'#FF00BB',
@@ -69,6 +70,7 @@ export default function RootLayout({
       <html lang="en" >
         <body className={`${geistMono.variable} ${poppins.variable} ${dmSans.variable} ${geistSans.variable} antialiased`}>
           {children}
+
           <Toaster
             position="top-right"
             richColors

@@ -1,4 +1,4 @@
-import TestUpload from '@/components/test-upload';
+import TestUpload from '@/app/test-upload/test-upload';
 import ImageKitContextProvider from '@/components/imagekit-provider';
 
 export default function TestUploadPage() {

@@ -10,22 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Loader2, Languages, Calendar, Eye, ExternalLink, Image as ImageIcon, Video } from 'lucide-react';
-import { useTranslation } from '@/hooks/useTranslation';
+import { Plus, Edit, Trash2, Save, X, Loader2, Calendar, Eye, ExternalLink, Image as ImageIcon, Video } from 'lucide-react';
 import Link from 'next/link';
 interface Event {
   id?: number;
   slug: string;
   heading_en: string;
-  heading_hi: string;
   description1_en: string;
-  description1_hi: string;
   description2_en: string;
-  description2_hi: string;
   photoSubheading_en: string;
-  photoSubheading_hi: string;
   videoSubheading_en: string;
-  videoSubheading_hi: string;
   isActive: boolean;
 }
 
@@ -50,6 +44,12 @@ interface PostSlug {
   eventPageSlug: string;
 }
 
+type PostWithSlug = {
+  id: number;
+  title_en: string;
+  eventPageSlug?: string;
+};
+
 export default function EventsManager() {
   const [events, setEvents] = useState<Event[]>([]);
   const [linkedPosts, setLinkedPosts] = useState<Post[]>([]);
@@ -60,24 +60,15 @@ export default function EventsManager() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<number | null>(null);
   const [previewMedia, setPreviewMedia] = useState<Media[]>([]);
-  const { translateContent, isTranslating } = useTranslation();
-
   const [formData, setFormData] = useState<Partial<Event>>({
     slug: '',
     heading_en: '',
-    heading_hi: '',
     description1_en: '',
-    description1_hi: '',
     description2_en: '',
-    description2_hi: '',
     photoSubheading_en: 'Photo/News Coverage:-',
-    photoSubheading_hi: 'फोटो/समाचार कवरेज:-',
     videoSubheading_en: 'Video Coverage:-',
-    videoSubheading_hi: 'वीडियो कवरेज:-',
     isActive: true,
   });
-
-  const [sourceLang, setSourceLang] = useState<'en' | 'hi'>('en');
 
   // Fetch events
   const fetchEvents = async () => {
@@ -131,8 +122,8 @@ export default function EventsManager() {
         const allPosts = await response.json();
         // Get posts that have eventPageSlug defined
         const postsWithSlugs = allPosts
-          .filter((post: any) => post.eventPageSlug && post.eventPageSlug.trim())
-          .map((post: any) => ({
+          .filter((post: PostWithSlug) => post.eventPageSlug && post.eventPageSlug.trim())
+          .map((post: PostWithSlug) => ({
             id: post.id,
             title_en: post.title_en,
             eventPageSlug: post.eventPageSlug
@@ -145,13 +136,17 @@ export default function EventsManager() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLinkedPosts();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAvailablePostSlugs();
   }, []);
 
   useEffect(() => {
     if (previewEventId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchPreviewMedia(previewEventId);
     }
   }, [previewEventId]);
@@ -163,31 +158,6 @@ export default function EventsManager() {
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-')
       .trim();
-  };
-
-  // Auto-translate content
-  const handleAutoTranslate = async () => {
-    const sourceHeading = sourceLang === 'en' ? formData.heading_en : formData.heading_hi;
-    if (!sourceHeading) return;
-
-    try {
-      const content = {
-        heading: sourceHeading,
-        description1: sourceLang === 'en' ? formData.description1_en : formData.description1_hi,
-        description2: sourceLang === 'en' ? formData.description2_en : formData.description2_hi,
-        photoSubheading: sourceLang === 'en' ? formData.photoSubheading_en : formData.photoSubheading_hi,
-        videoSubheading: sourceLang === 'en' ? formData.videoSubheading_en : formData.videoSubheading_hi,
-      };
-
-      const translated = await translateContent(content, sourceLang);
-      setFormData(prev => ({ 
-        ...prev, 
-        ...translated,
-        slug: prev.slug || generateSlug(sourceHeading)
-      }));
-    } catch (error) {
-      console.error('Translation failed:', error);
-    }
   };
 
   // Save event
@@ -223,15 +193,10 @@ export default function EventsManager() {
     setFormData({
       slug: '',
       heading_en: '',
-      heading_hi: '',
       description1_en: '',
-      description1_hi: '',
       description2_en: '',
-      description2_hi: '',
       photoSubheading_en: 'Photo/News Coverage:-',
-      photoSubheading_hi: 'फोटो/समाचार कवरेज:-',
       videoSubheading_en: 'Video Coverage:-',
-      videoSubheading_hi: 'वीडियो कवरेज:-',
       isActive: true,
     });
     setIsCreating(false);
@@ -506,44 +471,10 @@ export default function EventsManager() {
                   {editingId ? 'Edit Event' : 'Create New Event'}
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Create event pages with bilingual content. Auto-translation available.
+                  Create event pages with English content.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-                {/* Language Selection & Translation */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <Label className="text-sm">Primary Language:</Label>
-                  <Select value={sourceLang} onValueChange={(value: 'en' | 'hi') => setSourceLang(value)}>
-                    <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="hi">Hindi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full sm:w-auto"
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAutoTranslate}
-                      disabled={isTranslating}
-                      className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
-                    >
-                      {isTranslating ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Languages className="w-4 h-4 mr-2" />
-                      )}
-                      Auto Translate
-                    </Button>
-                  </motion.div>
-                </div>
-
                 {/* Slug Field with Dropdown - Made responsive */}
                 <div className="space-y-2">
                   <Label htmlFor="slug" className="text-sm">Event Slug (URL)</Label>
@@ -599,7 +530,7 @@ export default function EventsManager() {
                         </div>
                       </div>
                       <div className="text-xs text-blue-600 mt-2 bg-blue-50 p-2 rounded border border-blue-200">
-                        💡 Select a slug from posts with "Know More" buttons, or type your own below
+                        💡 Select a slug from posts with &quot;Know More&quot; buttons, or type your own below
                       </div>
                     </motion.div>
                   )}
@@ -621,9 +552,9 @@ export default function EventsManager() {
                 {/* Responsive Form Fields */}
                 <div className="grid grid-cols-1 gap-4">
                   {/* Heading Fields */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="heading_en" className="text-sm">Event Heading (English)</Label>
+                      <Label htmlFor="heading_en" className="text-sm">Event Heading  </Label>
                       <Input
                         id="heading_en"
                         value={formData.heading_en}
@@ -638,22 +569,12 @@ export default function EventsManager() {
                         className="border-pink-200 focus:border-pink-400 text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="heading_hi" className="text-sm">Event Heading (Hindi)</Label>
-                      <Input
-                        id="heading_hi"
-                        value={formData.heading_hi}
-                        onChange={(e) => setFormData(prev => ({ ...prev, heading_hi: e.target.value }))}
-                        placeholder="Enter Hindi heading"
-                        className="border-pink-200 focus:border-pink-400 text-sm"
-                      />
-                    </div>
                   </div>
 
                   {/* Description Fields - Made responsive */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="desc1_en" className="text-sm">Description 1 (English)</Label>
+                      <Label htmlFor="desc1_en" className="text-sm">Description 1  </Label>
                       <Textarea
                         id="desc1_en"
                         value={formData.description1_en}
@@ -662,22 +583,12 @@ export default function EventsManager() {
                         className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="desc1_hi" className="text-sm">Description 1 (Hindi)</Label>
-                      <Textarea
-                        id="desc1_hi"
-                        value={formData.description1_hi}
-                        onChange={(e) => setFormData(prev => ({ ...prev, description1_hi: e.target.value }))}
-                        placeholder="Enter first description paragraph in Hindi"
-                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
-                      />
-                    </div>
                   </div>
 
                   {/* Description 2 Fields */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="desc2_en" className="text-sm">Description 2 (English)</Label>
+                      <Label htmlFor="desc2_en" className="text-sm">Description 2  </Label>
                       <Textarea
                         id="desc2_en"
                         value={formData.description2_en}
@@ -686,22 +597,12 @@ export default function EventsManager() {
                         className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="desc2_hi" className="text-sm">Description 2 (Hindi)</Label>
-                      <Textarea
-                        id="desc2_hi"
-                        value={formData.description2_hi}
-                        onChange={(e) => setFormData(prev => ({ ...prev, description2_hi: e.target.value }))}
-                        placeholder="Enter second description paragraph in Hindi (optional)"
-                        className="border-pink-200 focus:border-pink-400 min-h-20 text-sm"
-                      />
-                    </div>
                   </div>
 
                   {/* Section Headings */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="photo_heading_en" className="text-sm">Photo Section Heading (English)</Label>
+                      <Label htmlFor="photo_heading_en" className="text-sm">Photo Section Heading  </Label>
                       <Input
                         id="photo_heading_en"
                         value={formData.photoSubheading_en}
@@ -710,36 +611,16 @@ export default function EventsManager() {
                         className="border-pink-200 focus:border-pink-400 text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="photo_heading_hi" className="text-sm">Photo Section Heading (Hindi)</Label>
-                      <Input
-                        id="photo_heading_hi"
-                        value={formData.photoSubheading_hi}
-                        onChange={(e) => setFormData(prev => ({ ...prev, photoSubheading_hi: e.target.value }))}
-                        placeholder="फोटो/समाचार कवरेज:-"
-                        className="border-pink-200 focus:border-pink-400 text-sm"
-                      />
-                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="video_heading_en" className="text-sm">Video Section Heading (English)</Label>
+                      <Label htmlFor="video_heading_en" className="text-sm">Video Section Heading  </Label>
                       <Input
                         id="video_heading_en"
                         value={formData.videoSubheading_en}
                         onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_en: e.target.value }))}
                         placeholder="Video Coverage:-"
-                        className="border-pink-200 focus:border-pink-400 text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="video_heading_hi" className="text-sm">Video Section Heading (Hindi)</Label>
-                      <Input
-                        id="video_heading_hi"
-                        value={formData.videoSubheading_hi}
-                        onChange={(e) => setFormData(prev => ({ ...prev, videoSubheading_hi: e.target.value }))}
-                        placeholder="वीडियो कवरेज:-"
                         className="border-pink-200 focus:border-pink-400 text-sm"
                       />
                     </div>
@@ -763,14 +644,9 @@ export default function EventsManager() {
                     >
                       <Button
                         onClick={handleSave}
-                        disabled={isTranslating}
                         className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
                       >
-                        {isTranslating ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <Save className="w-4 h-4 mr-2" />
-                        )}
+                        <Save className="w-4 h-4 mr-2" />
                         Save Event
                       </Button>
                     </motion.div>

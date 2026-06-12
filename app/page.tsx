@@ -3,15 +3,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, Calendar, Image, BarChart3, Settings, Home, BarChart2, BarChart4 } from 'lucide-react';
-import { SignedIn, UserButton } from '@clerk/nextjs';
+import { FileText, Calendar, ImageIcon, BarChart3 } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 import PostsManager from '@/components/dashboard/posts-manager';
 import EventsManager from '@/components/dashboard/events-manager';
 import MediaManager from '@/components/dashboard/media-manager';
 import DashboardStats from '@/components/dashboard/dashboard-stats';
-import Link from 'next/link';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('posts');
@@ -43,9 +40,7 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" />
-              </SignedIn>
+              <UserButton />
             </div>
           </div>
         </div>
@@ -89,8 +84,8 @@ export default function Dashboard() {
                 value="media"
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
               >
-                <Image className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Event's Media</span>
+                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Event Media</span>
                 <span className="sm:hidden">Media</span>
               </TabsTrigger>
             </TabsList>
