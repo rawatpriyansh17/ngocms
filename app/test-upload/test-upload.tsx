@@ -2,25 +2,26 @@
 
 import { useState, useRef } from 'react';
 import { upload, type UploadResponse } from '@imagekit/next';
+import Image from 'next/image';
+
+async function authenticator() {
+  try {
+    const response = await fetch('/api/upload-auth');
+    if (!response.ok) {
+      throw new Error(`Auth failed: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Authentication error:', error);
+    throw error;
+  }
+}
 
 export default function TestUpload() {
   const [uploadStatus, setUploadStatus] = useState<string>('Ready to upload');
   const [uploadedFile, setUploadedFile] = useState<UploadResponse | null>(null);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const authenticator = async () => {
-    try {
-      const response = await fetch('/api/upload-auth');
-      if (!response.ok) {
-        throw new Error(`Auth failed: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Authentication error:', error);
-      throw error;
-    }
-  };
 
   const handleUpload = async () => {
     const fileInput = fileInputRef.current;
@@ -86,8 +87,9 @@ export default function TestUpload() {
       
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Select File:</label>
+          <label htmlFor="test-upload-file" className="block text-sm font-medium mb-2">Select File:</label>
           <input 
+            id="test-upload-file"
             type="file" 
             ref={fileInputRef}
             className="w-full p-2 border border-gray-300 rounded"
@@ -96,6 +98,7 @@ export default function TestUpload() {
         </div>
 
         <button 
+          type="button"
           onClick={handleUpload}
           className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
         >
@@ -125,10 +128,12 @@ export default function TestUpload() {
               <p><strong>Type:</strong> {uploadedFile.fileType}</p>
             </div>
             
-            {uploadedFile.fileType?.startsWith('image') && (
-              <img 
+            {uploadedFile.url && uploadedFile.fileType?.startsWith('image') && (
+              <Image
                 src={uploadedFile.url} 
                 alt="Uploaded file" 
+                width={480}
+                height={320}
                 className="mt-2 max-w-full h-auto rounded"
               />
             )}

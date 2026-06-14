@@ -1,7 +1,7 @@
 import { getUploadAuthParams } from '@imagekit/next/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Add any authentication logic here if needed
     // For example, check if user is signed in via Clerk

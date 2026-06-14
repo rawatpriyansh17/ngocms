@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Calendar } from 'lucide-react';
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+};
 
 export default function DashboardStats() {
   type EventSummary = {
@@ -16,7 +20,6 @@ export default function DashboardStats() {
   });
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     async function fetchStats() {
       try {
         const [postsRes, eventsRes] = await Promise.all([
@@ -24,8 +27,10 @@ export default function DashboardStats() {
           fetch('/api/events'),
         ]);
 
-        const posts = await postsRes.json();
-        const events = await eventsRes.json();
+        const [posts, events] = await Promise.all([
+          postsRes.json(),
+          eventsRes.json(),
+        ]);
 
         setStats({
           posts: posts.length || 0,
@@ -38,11 +43,6 @@ export default function DashboardStats() {
 
     fetchStats();
   }, []);
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-8">

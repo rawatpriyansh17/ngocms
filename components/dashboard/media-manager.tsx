@@ -10,6 +10,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Save, X, Loader2, Image as ImageIcon, Video, Play, GripVertical } from 'lucide-react';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { upload } from '@imagekit/next';
@@ -34,6 +44,21 @@ interface Event {
   isActive: boolean;
 }
 
+const availableVideoThumbnails = [
+  { 
+    id: 'interview-thumb', 
+    name: 'Interview Thumbnail', 
+    path: '/interview.png',
+    type: 'interview'
+  },
+  { 
+    id: 'distribution-thumb', 
+    name: 'Distribution Thumbnail', 
+    path: '/distribution.png',
+    type: 'distribution'
+  },
+];
+
 export default function MediaManager() {
   const [media, setMedia] = useState<Media[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -54,22 +79,7 @@ export default function MediaManager() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-
-  const [showThumbnailSelector, setShowThumbnailSelector] = useState(false);
-  const [availableVideoThumbnails] = useState([
-    { 
-      id: 'interview-thumb', 
-      name: 'Interview Thumbnail', 
-      path: '/interview.png',
-      type: 'interview'
-    },
-    { 
-      id: 'distribution-thumb', 
-      name: 'Distribution Thumbnail', 
-      path: '/distribution.png',
-      type: 'distribution'
-    },
-  ]);
+  const [deleteTarget, setDeleteTarget] = useState<Media | null>(null);
 
   // Fetch events
   const fetchEvents = async () => {
@@ -108,7 +118,6 @@ export default function MediaManager() {
     if (selectedEventId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchMedia(selectedEventId);
     }
   }, [selectedEventId]);
@@ -249,7 +258,6 @@ export default function MediaManager() {
       order: 0,
     });
     removeSelectedFile();
-    setShowThumbnailSelector(false);
     setIsCreating(false);
     setEditingId(null);
   };
@@ -269,12 +277,11 @@ export default function MediaManager() {
 
   // Delete media
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this media?')) return;
-
     try {
       const response = await fetch(`/api/media/${id}`, { method: 'DELETE' });
       if (response.ok && selectedEventId) {
         await fetchMedia(selectedEventId);
+        setDeleteTarget(null);
       }
     } catch (error) {
       console.error('Failed to delete media:', error);
@@ -449,16 +456,19 @@ export default function MediaManager() {
                                   />
                                 )}
                                 <motion.div
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
+                                  className="absolute -top-2 -right-2"
+                                  whileHover={{ scale: 1.08 }}
+                                  whileTap={{ scale: 0.95 }}
                                 >
                                   <Button
+                                    type="button"
                                     variant="destructive"
-                                    size="sm"
-                                    className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                                    size="icon"
+                                    className="size-6 rounded-full p-0"
                                     onClick={removeSelectedFile}
+                                    aria-label="Remove selected media"
                                   >
-                                    <X className="w-3 h-3" />
+                                    <X className="size-3" />
                                   </Button>
                                 </motion.div>
                               </div>
@@ -633,9 +643,11 @@ export default function MediaManager() {
                                   >
                                     <p className="text-sm font-medium text-blue-800 mb-2">Current Selection:</p>
                                     <div className="flex items-center gap-3">
-                                      <img 
+                                      <Image
                                         src={formData.thumbnailUrl} 
                                         alt="Selected thumbnail" 
+                                        width={64}
+                                        height={48}
                                         className="w-12 h-9 sm:w-16 sm:h-12 object-cover rounded border"
                                       />
                                       <div className="flex-1">
@@ -720,9 +732,11 @@ export default function MediaManager() {
                                           : 'border-gray-200 hover:border-blue-300'
                                       }`}
                                     >
-                                      <img 
+                                      <Image
                                         src={thumbnail.path} 
                                         alt={thumbnail.name}
+                                        width={360}
+                                        height={180}
                                         className="w-full h-16 sm:h-24 object-cover"
                                       />
                                       <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-20 transition-all" />
@@ -737,9 +751,9 @@ export default function MediaManager() {
                                       <AnimatePresence>
                                         {formData.thumbnailUrl === thumbnail.path && (
                                           <motion.div 
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            exit={{ scale: 0 }}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
                                             transition={{ duration: 0.2 }}
                                             className="absolute top-1 right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 rounded-full flex items-center justify-center"
                                           >
@@ -876,17 +890,21 @@ export default function MediaManager() {
                                         {/* Media Preview */}
                                         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-pink-50 rounded-lg flex items-center justify-center overflow-hidden mx-auto lg:mx-0">
                                           {mediaItem.type === 'photo' ? (
-                                            <img 
+                                            <Image
                                               src={mediaItem.url} 
                                               alt={mediaItem.heading_en || 'Media'} 
+                                              width={160}
+                                              height={160}
                                               className="w-full h-full object-cover rounded-lg"
                                             />
                                           ) : (
                                             <div className="relative w-full h-full">
                                               {mediaItem.thumbnailUrl ? (
-                                                <img 
+                                                <Image
                                                   src={mediaItem.thumbnailUrl} 
                                                   alt={mediaItem.heading_en || 'Video thumbnail'} 
+                                                  width={160}
+                                                  height={160}
                                                   className="w-full h-full object-cover rounded-lg"
                                                 />
                                               ) : (
@@ -953,7 +971,7 @@ export default function MediaManager() {
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              onClick={() => handleDelete(mediaItem.id!)}
+                                              onClick={() => setDeleteTarget(mediaItem)}
                                               className="border-red-300 text-red-700 hover:bg-red-50 p-2"
                                             >
                                               <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -979,6 +997,30 @@ export default function MediaManager() {
           </motion.div>
         )}
       </AnimatePresence>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete media?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.heading_en ? `"${deleteTarget.heading_en}"` : 'this media item'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget?.id) {
+                  void handleDelete(deleteTarget.id);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

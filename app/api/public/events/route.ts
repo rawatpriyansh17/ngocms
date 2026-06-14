@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { eventsTable } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -12,18 +12,11 @@ export async function GET() {
       'Access-Control-Max-Age': '86400',
     };
 
-    // First, let's get ALL events to see what's in the database
-    const allEvents = await db.select().from(eventsTable).orderBy(desc(eventsTable.createdAt));
-    console.log('All events in database:', allEvents.map(e => ({ id: e.id, slug: e.slug, isActive: e.isActive })));
-
-    // Then filter for active ones
     const events = await db
       .select()
       .from(eventsTable)
       .where(eq(eventsTable.isActive, true))
       .orderBy(desc(eventsTable.createdAt));
-
-    console.log('Active events:', events.length);
 
     return NextResponse.json(events, { headers });
   } catch (error) {

@@ -8,6 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    void request;
     const { slug } = await params;
     const headers = {
       'Access-Control-Allow-Origin': '*',
@@ -16,20 +17,13 @@ export async function GET(
       'Access-Control-Max-Age': '86400',
     };
 
-    console.log('Searching for event with slug:', slug); // Debug log
-
-    // Get event by slug - Remove the isActive filter temporarily for debugging
     const [event] = await db
       .select()
       .from(eventsTable)
       .where(eq(eventsTable.slug, slug));
 
-    console.log('Found event:', event); // Debug log
-
     if (!event) {
-      // Let's also try to find all events to see what slugs exist
       const allEvents = await db.select({ slug: eventsTable.slug, id: eventsTable.id }).from(eventsTable);
-      console.log('All available event slugs:', allEvents); // Debug log
       
       return NextResponse.json(
         { 
@@ -41,7 +35,6 @@ export async function GET(
       );
     }
 
-    // Check if event is active
     if (!event.isActive) {
       return NextResponse.json(
         { 
@@ -53,16 +46,12 @@ export async function GET(
       );
     }
 
-    // Get media for this event
     const media = await db
       .select()
       .from(mediaTable)
       .where(eq(mediaTable.eventId, event.id))
       .orderBy(asc(mediaTable.order));
 
-    console.log('Found media for event:', media.length); // Debug log
-
-    // Separate photos and videos
     const photos = media.filter(m => m.type === 'photo');
     const videos = media.filter(m => m.type === 'video');
 
@@ -85,10 +74,7 @@ export async function GET(
   }
 }
 
-export async function OPTIONS(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function OPTIONS() {
   return NextResponse.json(
     {},
     {

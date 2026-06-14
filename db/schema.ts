@@ -44,6 +44,16 @@ export const mediaTable = sqliteTable('media', {
   createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
+// Site-wide upcoming program flyer shown on the public latest-event page
+export const latestEventTable = sqliteTable('latest_event', {
+  id: integer('id').primaryKey(),
+  imageUrl: text('image_url'),
+  imageAlt: text('image_alt').default('Upcoming program flyer'),
+  isActive: integer('is_active', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text('updated_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
 // Types
 export type InsertPost = typeof postsTable.$inferInsert;
 export type SelectPost = typeof postsTable.$inferSelect;
@@ -51,3 +61,5 @@ export type InsertEvent = typeof eventsTable.$inferInsert;
 export type SelectEvent = typeof eventsTable.$inferSelect;
 export type InsertMedia = typeof mediaTable.$inferInsert;
 export type SelectMedia = typeof mediaTable.$inferSelect;
+export type InsertLatestEvent = typeof latestEventTable.$inferInsert;
+export type SelectLatestEvent = typeof latestEventTable.$inferSelect;

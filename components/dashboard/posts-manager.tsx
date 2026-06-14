@@ -8,13 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Save, X, Loader2, Eye, GripVertical, Play, Calendar, ExternalLink, Video } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Edit, Trash2, Save, X, Loader2, Eye, GripVertical, Play, Video } from 'lucide-react';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { upload } from '@imagekit/next';
-import { Image } from '@imagekit/next';
+import { Image as ImageKitImage } from '@imagekit/next';
+import NextImage from 'next/image';
 import Link from 'next/link';
 interface Post {
   id?: number;
@@ -28,21 +38,49 @@ interface Post {
   order: number;
 }
 
-interface Event {
-  id: number;
-  slug: string;
-  heading_en: string;
-  isActive: boolean;
-}
+const availableThumbnails = [
+  { 
+    id: 'event-highlights1', 
+    name: 'Event Highlights 1', 
+    path: '/event-highlights1.png',
+    category: 'event'
+  },
+  { 
+    id: 'event-highlights2', 
+    name: 'Event Highlights 2', 
+    path: '/event-highlights2.png',
+    category: 'event'
+  },
+];
+
+const uploadPostToImageKit = async (file: File): Promise<string> => {
+  const authResponse = await fetch('/api/upload-auth');
+  const { token, expire, signature, publicKey } = await authResponse.json();
+
+  const uploadResponse = await upload({
+    file,
+    fileName: `post-${Date.now()}-${file.name}`,
+    token,
+    expire,
+    signature,
+    publicKey,
+    folder: '/posts',
+    useUniqueFileName: true,
+  });
+
+  if (!uploadResponse.url) {
+    throw new Error('Upload did not return a URL.');
+  }
+
+  return uploadResponse.url;
+};
 
 export default function PostsManager() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState<Partial<Post>>({
     title_en: '',
     description_en: '',
@@ -57,21 +95,7 @@ export default function PostsManager() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewPost, setPreviewPost] = useState<Post | null>(null);
-  const [showThumbnailSelector, setShowThumbnailSelector] = useState(false);
-  const [availableThumbnails] = useState([
-    { 
-      id: 'event-highlights1', 
-      name: 'Event Highlights 1', 
-      path: '/event-highlights1.png',
-      category: 'event'
-    },
-    { 
-      id: 'event-highlights2', 
-      name: 'Event Highlights 2', 
-      path: '/event-highlights2.png',
-      category: 'event'
-    },
-  ]);
+  const [deleteTarget, setDeleteTarget] = useState<Post | null>(null);
 
   // Fetch posts
   const fetchPosts = async () => {
@@ -88,24 +112,9 @@ export default function PostsManager() {
     }
   };
 
-  // Fetch events for dropdown
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch('/api/events');
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data.filter((event: Event) => event.isActive));
-      }
-    } catch (error) {
-      console.error('Failed to fetch events:', error);
-    }
-  };
-
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPosts();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchEvents();
   }, []);
 
   // Handle drag and drop reordering
@@ -139,33 +148,6 @@ export default function PostsManager() {
     }
   };
 
-  // Upload file to ImageKit
-  const uploadToImageKit = async (file: File): Promise<string> => {
-    try {
-      const authResponse = await fetch('/api/upload-auth');
-      const { token, expire, signature, publicKey } = await authResponse.json();
-
-      const uploadResponse = await upload({
-        file,
-        fileName: `post-${Date.now()}-${file.name}`,
-        token,
-        expire,
-        signature,
-        publicKey,
-        folder: '/posts',
-        useUniqueFileName: true,
-      });
-
-      if (!uploadResponse.url) {
-        throw new Error('Upload did not return a URL.');
-      }
-      return uploadResponse.url;
-    } catch (error) {
-      console.error('Upload failed:', error);
-      throw error;
-    }
-  };
-
   const handleFileDrop = (files: File[]) => {
     if (files.length > 0) {
       const file = files[0];
@@ -180,9 +162,6 @@ export default function PostsManager() {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
 
-      if (fileType === 'video') {
-        setShowThumbnailSelector(true);
-      }
     }
   };
 
@@ -202,7 +181,7 @@ export default function PostsManager() {
       let mediaUrl = formData.mediaUrl || '';
       
       if (selectedFile) {
-        mediaUrl = await uploadToImageKit(selectedFile);
+        mediaUrl = await uploadPostToImageKit(selectedFile);
       }
 
       const postData = {
@@ -262,12 +241,11 @@ export default function PostsManager() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-
     try {
       const response = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
       if (response.ok) {
         await fetchPosts();
+        setDeleteTarget(null);
       }
     } catch (error) {
       console.error('Failed to delete post:', error);
@@ -360,9 +338,11 @@ export default function PostsManager() {
                           transition={{ duration: 0.2 }}
                           className="relative"
                         >
-                          <img
-                            src={previewPost.thumbnailUrl || '/event-highlights-1.jpg'}
+                          <NextImage
+                            src={previewPost.thumbnailUrl || '/event-highlights1.png'}
                             alt="Video thumbnail"
+                            width={640}
+                            height={360}
                             className="w-full h-auto rounded-lg"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-opacity-30 rounded-lg">
@@ -381,7 +361,7 @@ export default function PostsManager() {
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <Image
+                          <ImageKitImage
                             urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
                             src={previewPost.mediaUrl}
                             alt={previewPost.title_en}
@@ -507,7 +487,7 @@ export default function PostsManager() {
                               <Play className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" />
                             </div>
                           ) : (
-                            <Image
+                            <ImageKitImage
                               urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
                               src={previewUrl}
                               alt="Preview"
@@ -517,16 +497,19 @@ export default function PostsManager() {
                             />
                           )}
                           <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                            className="absolute -top-2 -right-2"
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.95 }}
                           >
                             <Button
+                              type="button"
                               variant="destructive"
-                              size="sm"
-                              className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                              size="icon"
+                              className="size-6 rounded-full p-0"
                               onClick={removeSelectedFile}
+                              aria-label="Remove selected media"
                             >
-                              <X className="w-3 h-3" />
+                              <X className="size-3" />
                             </Button>
                           </motion.div>
                         </div>
@@ -616,9 +599,11 @@ export default function PostsManager() {
                             >
                               <p className="text-sm font-medium text-blue-800 mb-2">Current Selection:</p>
                               <div className="flex items-center gap-3">
-                                <img 
+                                <NextImage
                                   src={formData.thumbnailUrl} 
                                   alt="Selected thumbnail" 
+                                  width={64}
+                                  height={48}
                                   className="w-12 h-9 sm:w-16 sm:h-12 object-cover rounded border"
                                 />
                                 <div className="flex-1">
@@ -664,9 +649,11 @@ export default function PostsManager() {
                                     : 'border-gray-200 hover:border-blue-300'
                                 }`}
                               >
-                                <img 
+                                <NextImage
                                   src={thumbnail.path} 
                                   alt={thumbnail.name}
+                                  width={240}
+                                  height={120}
                                   className="w-full h-16 sm:h-24 object-cover"
                                 />
                                 <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-20 transition-all" />
@@ -678,9 +665,9 @@ export default function PostsManager() {
                                 <AnimatePresence>
                                   {formData.thumbnailUrl === thumbnail.path && (
                                     <motion.div 
-                                      initial={{ scale: 0 }}
-                                      animate={{ scale: 1 }}
-                                      exit={{ scale: 0 }}
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
                                       transition={{ duration: 0.2 }}
                                       className="absolute top-1 right-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 rounded-full flex items-center justify-center"
                                     >
@@ -719,7 +706,12 @@ export default function PostsManager() {
                       checked={!!formData.eventPageSlug}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setFormData(prev => ({ ...prev, eventPageSlug: 'my-event-' + Date.now() }));
+                          const slug = (formData.title_en || 'event-page')
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '')
+                            .replace(/\s+/g, '-')
+                            .trim();
+                          setFormData(prev => ({ ...prev, eventPageSlug: slug || 'event-page' }));
                         } else {
                           setFormData(prev => ({ ...prev, eventPageSlug: '' }));
                         }
@@ -988,7 +980,7 @@ export default function PostsManager() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleDelete(post.id!)}
+                                    onClick={() => setDeleteTarget(post)}
                                     className="border-red-300 text-red-700 hover:bg-red-50 p-2"
                                   >
                                     <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1009,6 +1001,30 @@ export default function PostsManager() {
           </Droppable>
         </DragDropContext>
       </motion.div>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.title_en ? `"${deleteTarget.title_en}"` : 'this post'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget?.id) {
+                  void handleDelete(deleteTarget.id);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

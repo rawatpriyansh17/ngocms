@@ -10,8 +10,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Save, X, Loader2, Calendar, Eye, ExternalLink, Image as ImageIcon, Video } from 'lucide-react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 interface Event {
   id?: number;
   slug: string;
@@ -50,6 +61,14 @@ type PostWithSlug = {
   eventPageSlug?: string;
 };
 
+const generateSlug = (heading: string) => {
+  return heading
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .trim();
+};
+
 export default function EventsManager() {
   const [events, setEvents] = useState<Event[]>([]);
   const [linkedPosts, setLinkedPosts] = useState<Post[]>([]);
@@ -60,6 +79,7 @@ export default function EventsManager() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<number | null>(null);
   const [previewMedia, setPreviewMedia] = useState<Media[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
   const [formData, setFormData] = useState<Partial<Event>>({
     slug: '',
     heading_en: '',
@@ -120,14 +140,19 @@ export default function EventsManager() {
       const response = await fetch('/api/posts');
       if (response.ok) {
         const allPosts = await response.json();
-        // Get posts that have eventPageSlug defined
-        const postsWithSlugs = allPosts
-          .filter((post: PostWithSlug) => post.eventPageSlug && post.eventPageSlug.trim())
-          .map((post: PostWithSlug) => ({
+        const postsWithSlugs = allPosts.reduce((slugs: PostSlug[], post: PostWithSlug) => {
+          if (!post.eventPageSlug?.trim()) {
+            return slugs;
+          }
+
+          slugs.push({
             id: post.id,
             title_en: post.title_en,
-            eventPageSlug: post.eventPageSlug
-          }));
+            eventPageSlug: post.eventPageSlug,
+          });
+
+          return slugs;
+        }, []);
         setAvailablePostSlugs(postsWithSlugs);
       }
     } catch (error) {
@@ -138,9 +163,7 @@ export default function EventsManager() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLinkedPosts();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAvailablePostSlugs();
   }, []);
 
@@ -150,15 +173,6 @@ export default function EventsManager() {
       fetchPreviewMedia(previewEventId);
     }
   }, [previewEventId]);
-
-  // Generate slug from heading
-  const generateSlug = (heading: string) => {
-    return heading
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .trim();
-  };
 
   // Save event
   const handleSave = async () => {
@@ -212,12 +226,11 @@ export default function EventsManager() {
 
   // Delete event
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
-
     try {
       const response = await fetch(`/api/events/${id}`, { method: 'DELETE' });
       if (response.ok) {
         await fetchEvents();
+        setDeleteTarget(null);
       }
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -369,9 +382,11 @@ export default function EventsManager() {
                               whileHover={{ scale: 1.05 }}
                               className="bg-white p-1 sm:p-2 rounded-lg shadow-md"
                             >
-                              <img
+                              <NextImage
                                 src={photo.url}
                                 alt={photo.heading_en || 'Event Photo'}
+                                width={240}
+                                height={160}
                                 className="w-full h-16 sm:h-24 object-cover rounded"
                               />
                               {photo.heading_en && (
@@ -782,7 +797,7 @@ export default function EventsManager() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(event.id!)}
+                          onClick={() => setDeleteTarget(event)}
                           className="border-red-300 text-red-700 hover:bg-red-50 p-2"
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -796,6 +811,30 @@ export default function EventsManager() {
           );
         })}
       </motion.div>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.heading_en ? `"${deleteTarget.heading_en}"` : 'this event'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget?.id) {
+                  void handleDelete(deleteTarget.id);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

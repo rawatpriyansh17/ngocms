@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Calendar, ImageIcon, BarChart3 } from 'lucide-react';
+import { FileText, Calendar, ImageIcon, BarChart3, Megaphone } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 import PostsManager from '@/components/dashboard/posts-manager';
 import EventsManager from '@/components/dashboard/events-manager';
 import MediaManager from '@/components/dashboard/media-manager';
 import DashboardStats from '@/components/dashboard/dashboard-stats';
+import LatestEventManager from '@/components/dashboard/latest-event-manager';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('posts');
@@ -63,7 +64,15 @@ export default function Dashboard() {
           transition={{ duration: 0.4, delay: 0.2 }}
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-white border-2 border-r-4 border-b-4 border-pink-700 shadow-sm h-auto p-1 ">
+            <TabsList className="grid w-full grid-cols-4 bg-white border-2 border-r-4 border-b-4 border-pink-700 shadow-sm h-auto p-1 ">
+                            <TabsTrigger 
+                value="latest"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
+              >
+                <Megaphone className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Latest Event</span>
+                <span className="sm:hidden">Latest</span>
+              </TabsTrigger>
               <TabsTrigger 
                 value="posts" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
@@ -80,6 +89,7 @@ export default function Dashboard() {
                 <span className="hidden sm:inline">Events</span>
                 <span className="sm:hidden">Events</span>
               </TabsTrigger>
+
               <TabsTrigger 
                 value="media"
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
@@ -98,13 +108,19 @@ export default function Dashboard() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
+                     <TabsContent value="latest" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+                  <LatestEventManager />
+                </TabsContent>
+                
                 <TabsContent value="posts" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
                   <PostsManager />
                 </TabsContent>
-                
+
+           
                 <TabsContent value="events" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
                   <EventsManager />
                 </TabsContent>
+
                 
                 <TabsContent value="media" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
                   <MediaManager />
