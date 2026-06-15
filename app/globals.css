@@ -134,3 +134,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* For most browsers */
+::selection {
+  background-color: deeppink; /* The highlight background color */
+  color: white;              /* The text color when highlighted */
+}
+
+/* For Firefox compatibility (older versions might need this) */
+::-moz-selection {
+  background-color: deeppink; /* The highlight background color */
+  color: white;
+} 
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #db2777 #fdf2f8;
+}
+/* Chrome, Edge, and Safari */
+*::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #fff1f2, #fce7f3);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ec4899, #db2777 48%, #be185d);
+  border: 3px solid #fdf2f8;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f472b6, #e11d48);
+}

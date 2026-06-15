@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +24,13 @@ import { Plus, Edit, Trash2, Save, X, Loader2, Image as ImageIcon, Video, Play, 
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { upload } from '@imagekit/next';
 import Image from 'next/image';
+import { toast } from 'sonner';
+import {
+  idleSaveProgress,
+  SaveProgress,
+  type SaveProgressState,
+} from '@/components/dashboard/save-progress';
+import { SlugCombobox } from '@/components/dashboard/slug-combobox';
 
 interface Media {
   id?: number;
@@ -59,6 +66,10 @@ const availableVideoThumbnails = [
   },
 ];
 
+const fallbackPreviewImage = '/placeholder.jpg';
+
+const getSafeImageSrc = (src?: string | null) => src?.trim() || fallbackPreviewImage;
+
 export default function MediaManager() {
   const [media, setMedia] = useState<Media[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -67,6 +78,7 @@ export default function MediaManager() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<SaveProgressState>(idleSaveProgress);
   const [formData, setFormData] = useState<Partial<Media>>({
     type: 'photo',
     url: '',
@@ -85,12 +97,14 @@ export default function MediaManager() {
   const fetchEvents = async () => {
     try {
       const response = await fetch('/api/events');
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data.filter((event: Event) => event.isActive));
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
       }
+      const data = await response.json();
+      setEvents(data.filter((event: Event) => event.isActive));
     } catch (error) {
       console.error('Failed to fetch events:', error);
+      toast.error('Could not load event slugs. Please refresh and try again.');
     }
   };
 
@@ -98,12 +112,14 @@ export default function MediaManager() {
   const fetchMedia = async (eventId: number) => {
     try {
       const response = await fetch(`/api/events/${eventId}/media`);
-      if (response.ok) {
-        const data = await response.json();
-        setMedia(data.sort((a: Media, b: Media) => a.order - b.order));
+      if (!response.ok) {
+        throw new Error('Failed to fetch media');
       }
+      const data = await response.json();
+      setMedia(data.sort((a: Media, b: Media) => a.order - b.order));
     } catch (error) {
       console.error('Failed to fetch media:', error);
+      toast.error('Could not load event media. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -113,14 +129,6 @@ export default function MediaManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, []);
-
-  useEffect(() => {
-    if (selectedEventId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoading(true);
-      fetchMedia(selectedEventId);
-    }
-  }, [selectedEventId]);
 
   // Handle drag and drop reordering
   const handleDragEnd = async (result: DropResult) => {
@@ -156,9 +164,15 @@ export default function MediaManager() {
   };
 
   // Upload file to ImageKit
-  const uploadToImageKit = async (file: File): Promise<string> => {
+  const uploadToImageKit = async (
+    file: File,
+    onProgress?: (progress: number) => void,
+  ): Promise<string> => {
     try {
       const authResponse = await fetch('/api/upload-auth');
+      if (!authResponse.ok) {
+        throw new Error('Could not prepare the upload. Please try again later.');
+      }
       const { token, expire, signature, publicKey } = await authResponse.json();
 
       const uploadResponse = await upload({
@@ -170,6 +184,10 @@ export default function MediaManager() {
         publicKey,
         folder: `/events/${selectedEventId}`,
         useUniqueFileName: true,
+        onProgress: (event) => {
+          if (!event.lengthComputable) return;
+          onProgress?.(Math.round((event.loaded / event.total) * 100));
+        },
       });
 
       if (!uploadResponse.url) {
@@ -186,6 +204,7 @@ export default function MediaManager() {
   const handleFileDrop = (files: File[]) => {
     if (files.length > 0) {
       const file = files[0];
+      setSaveProgress(idleSaveProgress);
       setSelectedFile(file);
       const fileType = file.type.startsWith('video/') ? 'video' : 'photo';
       setFormData(prev => ({ ...prev, type: fileType }));
@@ -205,6 +224,7 @@ export default function MediaManager() {
     setPreviewUrl('');
     // Clear url when removing file
     setFormData(prev => ({ ...prev, url: '' }));
+    setSaveProgress(idleSaveProgress);
   };
 
   // Save media
@@ -213,11 +233,28 @@ export default function MediaManager() {
 
     try {
       setUploadingFile(true);
+      setSaveProgress({
+        status: selectedFile ? 'uploading' : 'saving',
+        progress: selectedFile ? 5 : 35,
+        message: selectedFile ? 'Preparing media upload...' : 'Saving media...',
+      });
       
       let mediaUrl = formData.url || '';
       if (selectedFile) {
-        mediaUrl = await uploadToImageKit(selectedFile);
+        mediaUrl = await uploadToImageKit(selectedFile, (progress) => {
+          setSaveProgress({
+            status: 'uploading',
+            progress: Math.min(85, Math.max(8, progress)),
+            message: `Uploading ${selectedFile.name}`,
+          });
+        });
       }
+
+      setSaveProgress({
+        status: 'saving',
+        progress: 90,
+        message: editingId ? 'Updating media...' : 'Saving media to event...',
+      });
 
       const mediaData = {
         ...formData,
@@ -235,12 +272,26 @@ export default function MediaManager() {
         body: JSON.stringify(mediaData),
       });
 
-      if (response.ok) {
-        await fetchMedia(selectedEventId);
-        resetForm();
+      if (!response.ok) {
+        throw new Error(editingId ? 'Failed to update media' : 'Failed to create media');
       }
+
+      setSaveProgress({
+        status: 'success',
+        progress: 100,
+        message: editingId ? 'Media updated successfully.' : 'Media saved successfully.',
+      });
+      toast.success(editingId ? 'Media updated successfully.' : 'Media saved successfully.');
+      await fetchMedia(selectedEventId);
+      resetForm();
     } catch (error) {
       console.error('Failed to save media:', error);
+      setSaveProgress({
+        status: 'error',
+        progress: 100,
+        message: 'Media save failed. Try again later.',
+      });
+      toast.error('Media save failed. Try again later.');
     } finally {
       setUploadingFile(false);
     }
@@ -260,10 +311,12 @@ export default function MediaManager() {
     removeSelectedFile();
     setIsCreating(false);
     setEditingId(null);
+    setSaveProgress(idleSaveProgress);
   };
 
   // Edit media
   const handleEdit = (mediaItem: Media) => {
+    setSaveProgress(idleSaveProgress);
     setFormData(mediaItem);
     setEditingId(mediaItem.id!);
     setIsCreating(true);
@@ -286,6 +339,32 @@ export default function MediaManager() {
     } catch (error) {
       console.error('Failed to delete media:', error);
     }
+  };
+
+  const eventOptions = useMemo(
+    () =>
+      events.map((event) => ({
+        value: event.id.toString(),
+        label: event.heading_en,
+        description: `/events/${event.slug}`,
+      })),
+    [events],
+  );
+
+  const handleSelectEvent = (value: string) => {
+    resetForm();
+
+    if (!value) {
+      setSelectedEventId(null);
+      setMedia([]);
+      setLoading(false);
+      return;
+    }
+
+    const nextEventId = parseInt(value);
+    setSelectedEventId(nextEventId);
+    setLoading(true);
+    void fetchMedia(nextEventId);
   };
 
   return (
@@ -317,29 +396,15 @@ export default function MediaManager() {
           <CardContent className="pt-4 sm:pt-6">
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <div className="flex-1">
-                <Select 
-                  value={selectedEventId?.toString() || ""} 
-                  onValueChange={(value) => setSelectedEventId(value ? parseInt(value) : null)}
-                >
-                  <SelectTrigger className="border-pink-200 focus:border-pink-400 w-full">
-                    <SelectValue 
-                      placeholder="Select an event..." 
-                      className="truncate block w-full text-left overflow-hidden"
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] sm:max-w-none">
-                    {events.map((event) => (
-                      <SelectItem key={event.id} value={event.id.toString()}>
-                        <div className="flex flex-col items-start w-full min-w-0">
-                          <span className="font-medium text-sm w-full truncate">{event.heading_en}</span>
-                          <code className="text-xs text-blue-600 px-1 rounded w-full truncate">
-                            /events/{event.slug}
-                          </code>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SlugCombobox
+                  value={selectedEventId?.toString() || ""}
+                  options={eventOptions}
+                  onValueChange={handleSelectEvent}
+                  placeholder="Search or select an event slug..."
+                  searchPlaceholder="Type event heading or slug..."
+                  emptyMessage="No matching events found."
+                  className="focus:border-pink-400"
+                />
               </div>
               
               {/* Clear Button */}
@@ -356,7 +421,7 @@ export default function MediaManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setSelectedEventId(null)}
+                      onClick={() => handleSelectEvent('')}
                       className="border-red-600 bg-red-500 text-white hover:bg-gradient-to-r from-red-500 to-red-700 hover:text-white cursor-pointer"
                     >
                       Clear
@@ -387,7 +452,10 @@ export default function MediaManager() {
                 whileTap={{ scale: 0.98 }}
               >
                 <Button
-                  onClick={() => setIsCreating(true)}
+                  onClick={() => {
+                    setSaveProgress(idleSaveProgress);
+                    setIsCreating(true);
+                  }}
                   className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -406,7 +474,7 @@ export default function MediaManager() {
                   transition={{ duration: 0.3 }}
                 >
                   <Card className="border-pink-200">
-                    <CardHeader className="bg-pink-50">
+                    <CardHeader >
                       <CardTitle className="text-pink-900 flex items-center gap-2 text-base sm:text-lg">
                         <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                         {editingId ? 'Edit Media' : 'Add New Media'}
@@ -448,11 +516,12 @@ export default function MediaManager() {
                                   </div>
                                 ) : (
                                   <Image
-                                    src={previewUrl}
+                                    src={getSafeImageSrc(previewUrl)}
                                     alt="Preview"
                                     width={128}
                                     height={96}
                                     className="w-24 h-18 sm:w-32 sm:h-24 object-cover rounded-lg"
+                                    unoptimized={previewUrl.startsWith('blob:')}
                                   />
                                 )}
                                 <motion.div
@@ -633,7 +702,7 @@ export default function MediaManager() {
                               
                               {/* Current Selection */}
                               <AnimatePresence>
-                                {formData.thumbnailUrl && (
+                                {formData.thumbnailUrl?.trim() && (
                                   <motion.div 
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -644,7 +713,7 @@ export default function MediaManager() {
                                     <p className="text-sm font-medium text-blue-800 mb-2">Current Selection:</p>
                                     <div className="flex items-center gap-3">
                                       <Image
-                                        src={formData.thumbnailUrl} 
+                                        src={getSafeImageSrc(formData.thumbnailUrl)}
                                         alt="Selected thumbnail" 
                                         width={64}
                                         height={48}
@@ -768,10 +837,7 @@ export default function MediaManager() {
                                 </div>
                               </div>
 
-                              {/* Help Text */}
-                              <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-700">
-                                💡 <strong>Tip:</strong> The thumbnail will be displayed on the event page when the video is not playing. Choose based on your video type: Interview or Distribution.
-                              </div>
+                         
                             </div>
                           </motion.div>
                         )}
@@ -782,7 +848,7 @@ export default function MediaManager() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, delay: 0.7 }}
-                        className="flex flex-col sm:flex-row gap-2 pt-4"
+                        className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-start"
                       >
                         <motion.div
                           whileHover={{ scale: 1.02 }}
@@ -816,6 +882,7 @@ export default function MediaManager() {
                             Cancel
                           </Button>
                         </motion.div>
+                        <SaveProgress state={saveProgress} className="sm:ml-auto" />
                       </motion.div>
                     </CardContent>
                   </Card>
@@ -891,7 +958,7 @@ export default function MediaManager() {
                                         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-pink-50 rounded-lg flex items-center justify-center overflow-hidden mx-auto lg:mx-0">
                                           {mediaItem.type === 'photo' ? (
                                             <Image
-                                              src={mediaItem.url} 
+                                              src={getSafeImageSrc(mediaItem.url)}
                                               alt={mediaItem.heading_en || 'Media'} 
                                               width={160}
                                               height={160}
@@ -899,9 +966,9 @@ export default function MediaManager() {
                                             />
                                           ) : (
                                             <div className="relative w-full h-full">
-                                              {mediaItem.thumbnailUrl ? (
+                                              {mediaItem.thumbnailUrl?.trim() ? (
                                                 <Image
-                                                  src={mediaItem.thumbnailUrl} 
+                                                  src={getSafeImageSrc(mediaItem.thumbnailUrl)}
                                                   alt={mediaItem.heading_en || 'Video thumbnail'} 
                                                   width={160}
                                                   height={160}

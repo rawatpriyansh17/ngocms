@@ -23,9 +23,14 @@ import {
 import { Plus, Edit, Trash2, Save, X, Loader2, Eye, GripVertical, Play, Video } from 'lucide-react';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { upload } from '@imagekit/next';
-import { Image as ImageKitImage } from '@imagekit/next';
 import NextImage from 'next/image';
 import Link from 'next/link';
+import { toast } from 'sonner';
+import {
+  idleSaveProgress,
+  SaveProgress,
+  type SaveProgressState,
+} from '@/components/dashboard/save-progress';
 interface Post {
   id?: number;
   title_en: string;
@@ -53,8 +58,18 @@ const availableThumbnails = [
   },
 ];
 
-const uploadPostToImageKit = async (file: File): Promise<string> => {
+const fallbackPreviewImage = '/placeholder.jpg';
+
+const getSafeImageSrc = (src?: string | null) => src?.trim() || fallbackPreviewImage;
+
+const uploadPostToImageKit = async (
+  file: File,
+  onProgress?: (progress: number) => void,
+): Promise<string> => {
   const authResponse = await fetch('/api/upload-auth');
+  if (!authResponse.ok) {
+    throw new Error('Could not prepare the upload. Please try again later.');
+  }
   const { token, expire, signature, publicKey } = await authResponse.json();
 
   const uploadResponse = await upload({
@@ -66,6 +81,10 @@ const uploadPostToImageKit = async (file: File): Promise<string> => {
     publicKey,
     folder: '/posts',
     useUniqueFileName: true,
+    onProgress: (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(Math.round((event.loaded / event.total) * 100));
+    },
   });
 
   if (!uploadResponse.url) {
@@ -81,6 +100,7 @@ export default function PostsManager() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<SaveProgressState>(idleSaveProgress);
   const [formData, setFormData] = useState<Partial<Post>>({
     title_en: '',
     description_en: '',
@@ -101,12 +121,14 @@ export default function PostsManager() {
   const fetchPosts = async () => {
     try {
       const response = await fetch('/api/posts');
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.sort((a: Post, b: Post) => a.order - b.order));
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
       }
+      const data = await response.json();
+      setPosts(data.sort((a: Post, b: Post) => a.order - b.order));
     } catch (error) {
       console.error('Failed to fetch posts:', error);
+      toast.error('Could not load posts. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
@@ -151,6 +173,7 @@ export default function PostsManager() {
   const handleFileDrop = (files: File[]) => {
     if (files.length > 0) {
       const file = files[0];
+      setSaveProgress(idleSaveProgress);
       setSelectedFile(file);
       const fileType = file.type.startsWith('video/') ? 'video' : 'image';
       setFormData(prev => ({ 
@@ -172,22 +195,40 @@ export default function PostsManager() {
     }
     setPreviewUrl('');
     setFormData(prev => ({ ...prev, mediaUrl: '' }));
+    setSaveProgress(idleSaveProgress);
   };
 
   const handleSave = async () => {
     try {
       setUploadingFile(true);
+      setSaveProgress({
+        status: selectedFile ? 'uploading' : 'saving',
+        progress: selectedFile ? 5 : 35,
+        message: selectedFile ? 'Preparing media upload...' : 'Saving post...',
+      });
       
       let mediaUrl = formData.mediaUrl || '';
       
       if (selectedFile) {
-        mediaUrl = await uploadPostToImageKit(selectedFile);
+        mediaUrl = await uploadPostToImageKit(selectedFile, (progress) => {
+          setSaveProgress({
+            status: 'uploading',
+            progress: Math.min(85, Math.max(8, progress)),
+            message: `Uploading ${selectedFile.name}`,
+          });
+        });
       }
+
+      setSaveProgress({
+        status: 'saving',
+        progress: 90,
+        message: editingId ? 'Updating post...' : 'Adding post at the top...',
+      });
 
       const postData = {
         ...formData,
         mediaUrl,
-        order: editingId ? formData.order : (posts.length + 1),
+        order: editingId ? formData.order : 1,
       };
 
       const url = editingId ? `/api/posts/${editingId}` : '/api/posts';
@@ -199,12 +240,41 @@ export default function PostsManager() {
         body: JSON.stringify(postData),
       });
 
-      if (response.ok) {
-        await fetchPosts();
-        resetForm();
+      if (!response.ok) {
+        throw new Error(editingId ? 'Failed to update post' : 'Failed to create post');
       }
+
+      if (!editingId) {
+        const orderResponses = await Promise.all(
+          posts.map((post) =>
+            fetch(`/api/posts/${post.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...post, order: post.order + 1 }),
+            }),
+          ),
+        );
+        if (orderResponses.some((orderResponse) => !orderResponse.ok)) {
+          throw new Error('Post was created, but existing post order could not be shifted');
+        }
+      }
+
+      setSaveProgress({
+        status: 'success',
+        progress: 100,
+        message: editingId ? 'Post updated successfully.' : 'Post saved at #1.',
+      });
+      toast.success(editingId ? 'Post updated successfully.' : 'Post saved at the top.');
+      await fetchPosts();
+      resetForm();
     } catch (error) {
       console.error('Failed to save post:', error);
+      setSaveProgress({
+        status: 'error',
+        progress: 100,
+        message: 'Post save failed. Try again later.',
+      });
+      toast.error('Post save failed. Try again later.');
     } finally {
       setUploadingFile(false);
     }
@@ -224,12 +294,14 @@ export default function PostsManager() {
     removeSelectedFile();
     setIsCreating(false);
     setEditingId(null);
+    setSaveProgress(idleSaveProgress);
     if (!editingId) {
       setPreviewUrl('');
     }
   };
 
   const handleEdit = (post: Post) => {
+    setSaveProgress(idleSaveProgress);
     setFormData(post);
     setEditingId(post.id!);
     setIsCreating(true);
@@ -254,6 +326,12 @@ export default function PostsManager() {
 
   const handlePreviewPost = (post: Post) => {
     setPreviewPost(post);
+    requestAnimationFrame(() => {
+      document.getElementById('live-postpreview')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   };
 
   if (loading) {
@@ -269,7 +347,7 @@ export default function PostsManager() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-5">
       {/* Header */}
       <motion.div 
         initial={{ y: -10, opacity: 0 }}
@@ -277,7 +355,7 @@ export default function PostsManager() {
         transition={{ duration: 0.3 }}
         className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4"
       >
-        <div id='live-postpreview'>
+        <div>
           <h2 className="text-xl sm:text-2xl font-bold text-pink-900">Posts Management</h2>
           <p className="text-sm sm:text-base text-pink-700">Drag posts to reorder • Auto-saves order changes</p>
         </div>
@@ -286,7 +364,10 @@ export default function PostsManager() {
           whileTap={{ scale: 0.98 }}
         >
           <Button
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setSaveProgress(idleSaveProgress);
+              setIsCreating(true);
+            }}
             className="bg-gradient-to-b from-pink-400 via-pink-600 to-pink-500 hover:bg-pink-700 text-white w-full sm:w-auto font-semibold text-md"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -299,6 +380,7 @@ export default function PostsManager() {
       <AnimatePresence>
         {previewPost && (
           <motion.div
+            id="live-postpreview"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -339,7 +421,7 @@ export default function PostsManager() {
                           className="relative"
                         >
                           <NextImage
-                            src={previewPost.thumbnailUrl || '/event-highlights1.png'}
+                            src={getSafeImageSrc(previewPost.thumbnailUrl)}
                             alt="Video thumbnail"
                             width={640}
                             height={360}
@@ -361,9 +443,8 @@ export default function PostsManager() {
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <ImageKitImage
-                            urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                            src={previewPost.mediaUrl}
+                          <NextImage
+                            src={getSafeImageSrc(previewPost.mediaUrl)}
                             alt={previewPost.title_en}
                             width={400}
                             height={300}
@@ -487,13 +568,13 @@ export default function PostsManager() {
                               <Play className="w-6 h-6 sm:w-8 sm:h-8 text-gray-500" />
                             </div>
                           ) : (
-                            <ImageKitImage
-                              urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
-                              src={previewUrl}
+                            <NextImage
+                              src={getSafeImageSrc(previewUrl)}
                               alt="Preview"
                               width={128}
                               height={96}
                               className="w-24 h-18 sm:w-32 sm:h-24 object-cover rounded-lg"
+                              unoptimized={previewUrl.startsWith('blob:')}
                             />
                           )}
                           <motion.div
@@ -589,7 +670,7 @@ export default function PostsManager() {
                         
                         {/* Current Selection */}
                         <AnimatePresence>
-                          {formData.thumbnailUrl && (
+                          {formData.thumbnailUrl?.trim() && (
                             <motion.div 
                               initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
@@ -600,7 +681,7 @@ export default function PostsManager() {
                               <p className="text-sm font-medium text-blue-800 mb-2">Current Selection:</p>
                               <div className="flex items-center gap-3">
                                 <NextImage
-                                  src={formData.thumbnailUrl} 
+                                  src={getSafeImageSrc(formData.thumbnailUrl)}
                                   alt="Selected thumbnail" 
                                   width={64}
                                   height={48}
@@ -798,7 +879,7 @@ export default function PostsManager() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: 0.8 }}
-                  className="flex flex-col sm:flex-row gap-2 pt-4"
+                  className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-start"
                 >
                   <motion.div
                     whileHover={{ scale: 1.02 }}
@@ -832,6 +913,7 @@ export default function PostsManager() {
                       Cancel
                     </Button>
                   </motion.div>
+                  <SaveProgress state={saveProgress} className="sm:ml-auto" />
                 </motion.div>
 
                 {/* Preview Button in Form */}
@@ -845,7 +927,6 @@ export default function PostsManager() {
                       transition={{ duration: 0.2 }}
                       className="pt-4 border-t border-pink-200"
                     >
-                      <Link href="#live-postpreview">
                         <motion.div
                           whileHover={{ scale: 1.02 }}
                           className='cursor-pointer'
@@ -872,7 +953,6 @@ export default function PostsManager() {
                             Preview This Post
                           </Button>
                         </motion.div>
-                      </Link>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -942,7 +1022,7 @@ export default function PostsManager() {
                                     </Badge>
                                     {post.eventPageSlug && (
                                       <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs">
-                                        Links to: {post.eventPageSlug}
+                                        Links to: ../{post.eventPageSlug}
                                       </Badge>
                                     )}
                                   </div>
@@ -952,7 +1032,6 @@ export default function PostsManager() {
 
                               {/* Action Buttons */}
                               <div className="flex flex-col gap-1 sm:gap-2 justify-center lg:justify-start">
-                                <Link href="#live-postpreview">
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                   <Button
                                     variant="outline"
@@ -963,7 +1042,6 @@ export default function PostsManager() {
                                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                   </Button>
                                 </motion.div>
-                                </Link>
                                 <Link href='#edit-post'>
                                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                     <Button

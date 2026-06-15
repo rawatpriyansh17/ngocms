@@ -10,6 +10,7 @@ import EventsManager from '@/components/dashboard/events-manager';
 import MediaManager from '@/components/dashboard/media-manager';
 import DashboardStats from '@/components/dashboard/dashboard-stats';
 import LatestEventManager from '@/components/dashboard/latest-event-manager';
+import Image from 'next/image';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('posts');
@@ -29,13 +30,19 @@ export default function Dashboard() {
               <motion.div 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-pink-600 rounded-lg flex items-center justify-center"
+                className="w-10 h-10 sm:w-12 sm:h-12  rounded-full ring-1 ring-pink-700 flex items-center justify-center p-1"
               >
-                <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={50}
+                height={50}
+                className="object-cover rounded-full m-2"
+              />
               </motion.div>
               <div>
-                <h1 className="text-lg sm:text-2xl font-bold text-pink-900">
-                  CMS Dashboard
+                <h1 className="text-md sm:text-3xl font-bold text-pink-900">
+                  Content Management System
                 </h1>
               </div>
             </div>
@@ -65,14 +72,7 @@ export default function Dashboard() {
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
             <TabsList className="grid w-full grid-cols-4 bg-white border-2 border-r-4 border-b-4 border-pink-700 shadow-sm h-auto p-1 ">
-                            <TabsTrigger 
-                value="latest"
-                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
-              >
-                <Megaphone className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Latest Event</span>
-                <span className="sm:hidden">Latest</span>
-              </TabsTrigger>
+
               <TabsTrigger 
                 value="posts" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
@@ -97,6 +97,14 @@ export default function Dashboard() {
                 <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Event Media</span>
                 <span className="sm:hidden">Media</span>
+              </TabsTrigger>
+                       <TabsTrigger 
+                value="latest"
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-pink-300 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-sm py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm transition-all duration-200 cursor-pointer"
+              >
+                <Megaphone className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Latest Event</span>
+                <span className="sm:hidden">Latest</span>
               </TabsTrigger>
             </TabsList>
 

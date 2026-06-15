@@ -12,6 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
+import {
+  idleSaveProgress,
+  SaveProgress,
+  type SaveProgressState,
+} from '@/components/dashboard/save-progress';
 
 interface LatestEvent {
   id: number;
@@ -20,8 +25,18 @@ interface LatestEvent {
   isActive: boolean;
 }
 
-const uploadLatestEventImage = async (file: File): Promise<string> => {
+const fallbackPreviewImage = '/placeholder.jpg';
+
+const getSafeImageSrc = (src?: string | null) => src?.trim() || fallbackPreviewImage;
+
+const uploadLatestEventImage = async (
+  file: File,
+  onProgress?: (progress: number) => void,
+): Promise<string> => {
   const authResponse = await fetch('/api/upload-auth');
+  if (!authResponse.ok) {
+    throw new Error('Could not prepare the upload. Please try again later.');
+  }
   const { token, expire, signature, publicKey } = await authResponse.json();
 
   const uploadResponse = await upload({
@@ -33,6 +48,10 @@ const uploadLatestEventImage = async (file: File): Promise<string> => {
     publicKey,
     folder: '/latest-event',
     useUniqueFileName: true,
+    onProgress: (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(Math.round((event.loaded / event.total) * 100));
+    },
   });
 
   if (!uploadResponse.url) {
@@ -53,6 +72,7 @@ export default function LatestEventManager() {
   const [previewUrl, setPreviewUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<SaveProgressState>(idleSaveProgress);
 
   const fetchLatestEvent = async () => {
     try {
@@ -89,6 +109,7 @@ export default function LatestEventManager() {
       URL.revokeObjectURL(previewUrl);
     }
 
+    setSaveProgress(idleSaveProgress);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   };
@@ -99,16 +120,34 @@ export default function LatestEventManager() {
       URL.revokeObjectURL(previewUrl);
     }
     setPreviewUrl('');
+    setSaveProgress(idleSaveProgress);
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      setSaveProgress({
+        status: selectedFile ? 'uploading' : 'saving',
+        progress: selectedFile ? 5 : 35,
+        message: selectedFile ? 'Preparing flyer upload...' : 'Saving latest event settings...',
+      });
 
       let imageUrl = latestEvent.imageUrl;
       if (selectedFile) {
-        imageUrl = await uploadLatestEventImage(selectedFile);
+        imageUrl = await uploadLatestEventImage(selectedFile, (progress) => {
+          setSaveProgress({
+            status: 'uploading',
+            progress: Math.min(85, Math.max(8, progress)),
+            message: `Uploading ${selectedFile.name}`,
+          });
+        });
       }
+
+      setSaveProgress({
+        status: 'saving',
+        progress: 90,
+        message: 'Publishing latest event settings...',
+      });
 
       const response = await fetch('/api/latest-event', {
         method: 'PUT',
@@ -132,10 +171,20 @@ export default function LatestEventManager() {
         isActive: Boolean(saved.isActive),
       });
       removeSelectedFile();
+      setSaveProgress({
+        status: 'success',
+        progress: 100,
+        message: 'Latest event settings saved.',
+      });
       toast.success('Latest event settings saved.');
     } catch (error) {
       console.error('Failed to save latest event:', error);
-      toast.error('Could not save latest event settings.');
+      setSaveProgress({
+        status: 'error',
+        progress: 100,
+        message: 'Latest event save failed. Try again later.',
+      });
+      toast.error('Latest event save failed. Try again later.');
     } finally {
       setSaving(false);
     }
@@ -153,7 +202,7 @@ export default function LatestEventManager() {
     );
   }
 
-  const displayImage = previewUrl || latestEvent.imageUrl;
+  const displayImage = getSafeImageSrc(previewUrl || latestEvent.imageUrl);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -184,6 +233,7 @@ export default function LatestEventManager() {
                 width={720}
                 height={480}
                 className="h-auto w-full rounded-lg object-contain"
+                unoptimized={displayImage.startsWith('blob:')}
               />
             ) : (
               <div className="flex aspect-[4/3] flex-col items-center justify-center rounded-lg bg-pink-50 text-center text-pink-700">
@@ -253,19 +303,22 @@ export default function LatestEventManager() {
               </div>
             </div>
 
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-pink-600 text-white hover:bg-pink-700"
-            >
-              {saving ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 size-4" />
-              )}
-              {saving ? 'Saving...' : 'Save Latest Event'}
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="w-full bg-pink-600 text-white hover:bg-pink-700 sm:w-auto"
+              >
+                {saving ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 size-4" />
+                )}
+                {saving ? 'Saving...' : 'Save Latest Event'}
+              </Button>
+              <SaveProgress state={saveProgress} />
+            </div>
           </div>
 
         </CardContent>

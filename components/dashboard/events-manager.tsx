@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,9 +19,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Edit, Trash2, Save, X, Loader2, Calendar, Eye, ExternalLink, Image as ImageIcon, Video } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Loader2, Calendar, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import NextImage from 'next/image';
+import { toast } from 'sonner';
+import {
+  idleSaveProgress,
+  SaveProgress,
+  type SaveProgressState,
+} from '@/components/dashboard/save-progress';
+import { SlugCombobox } from '@/components/dashboard/slug-combobox';
 interface Event {
   id?: number;
   slug: string;
@@ -32,14 +37,6 @@ interface Event {
   photoSubheading_en: string;
   videoSubheading_en: string;
   isActive: boolean;
-}
-
-interface Media {
-  id: number;
-  type: 'photo' | 'video';
-  url: string;
-  heading_en?: string;
-  videoType?: 'interview' | 'distribution';
 }
 
 interface Post {
@@ -76,10 +73,9 @@ export default function EventsManager() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewEventId, setPreviewEventId] = useState<number | null>(null);
-  const [previewMedia, setPreviewMedia] = useState<Media[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState<SaveProgressState>(idleSaveProgress);
   const [formData, setFormData] = useState<Partial<Event>>({
     slug: '',
     heading_en: '',
@@ -94,28 +90,16 @@ export default function EventsManager() {
   const fetchEvents = async () => {
     try {
       const response = await fetch('/api/events');
-      if (response.ok) {
-        const data = await response.json();
-        setEvents(data);
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
       }
+      const data = await response.json();
+      setEvents(data);
     } catch (error) {
       console.error('Failed to fetch events:', error);
+      toast.error('Could not load events. Please refresh and try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Fetch media for preview
-  const fetchPreviewMedia = async (eventId: number) => {
-    try {
-      const response = await fetch(`/api/events/${eventId}/media`);
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewMedia(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch preview media:', error);
-      setPreviewMedia([]);
     }
   };
 
@@ -167,16 +151,16 @@ export default function EventsManager() {
     fetchAvailablePostSlugs();
   }, []);
 
-  useEffect(() => {
-    if (previewEventId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      fetchPreviewMedia(previewEventId);
-    }
-  }, [previewEventId]);
-
   // Save event
   const handleSave = async () => {
     try {
+      setSaving(true);
+      setSaveProgress({
+        status: 'saving',
+        progress: 35,
+        message: editingId ? 'Updating event...' : 'Creating event...',
+      });
+
       // Auto-generate slug if empty
       const eventData = {
         ...formData,
@@ -192,13 +176,34 @@ export default function EventsManager() {
         body: JSON.stringify(eventData),
       });
 
-      if (response.ok) {
-        await fetchEvents();
-        await fetchAvailablePostSlugs(); // Add this line
-        resetForm();
+      if (!response.ok) {
+        throw new Error(editingId ? 'Failed to update event' : 'Failed to create event');
       }
+
+      setSaveProgress({
+        status: 'saving',
+        progress: 80,
+        message: 'Refreshing event lists...',
+      });
+      await fetchEvents();
+      await fetchAvailablePostSlugs();
+      setSaveProgress({
+        status: 'success',
+        progress: 100,
+        message: editingId ? 'Event updated successfully.' : 'Event created successfully.',
+      });
+      toast.success(editingId ? 'Event updated successfully.' : 'Event created successfully.');
+      resetForm();
     } catch (error) {
       console.error('Failed to save event:', error);
+      setSaveProgress({
+        status: 'error',
+        progress: 100,
+        message: 'Event save failed. Try again later.',
+      });
+      toast.error('Event save failed. Try again later.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -215,10 +220,12 @@ export default function EventsManager() {
     });
     setIsCreating(false);
     setEditingId(null);
+    setSaveProgress(idleSaveProgress);
   };
 
   // Edit event
   const handleEdit = (event: Event) => {
+    setSaveProgress(idleSaveProgress);
     setFormData(event);
     setEditingId(event.id!);
     setIsCreating(true);
@@ -237,11 +244,15 @@ export default function EventsManager() {
     }
   };
 
-  // Preview event
-  const handlePreview = (event: Event) => {
-    setPreviewEventId(event.id!);
-    setShowPreview(true);
-  };
+  const postSlugOptions = useMemo(
+    () =>
+      availablePostSlugs.map((postSlug) => ({
+        value: postSlug.eventPageSlug,
+        label: postSlug.title_en,
+        description: postSlug.eventPageSlug,
+      })),
+    [availablePostSlugs],
+  );
 
   if (loading) {
     return (
@@ -255,8 +266,6 @@ export default function EventsManager() {
     );
   }
 
-  const previewEvent = events.find(e => e.id === previewEventId);
-
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -266,7 +275,7 @@ export default function EventsManager() {
         transition={{ duration: 0.3 }}
         className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4"
       >
-        <div id='live-eventpreview'>
+        <div>
           <h2 className="text-xl sm:text-2xl font-bold text-pink-900">Events Management</h2>
           <p className="text-sm sm:text-base text-pink-700">Manage event pages and their content</p>
         </div>
@@ -276,7 +285,10 @@ export default function EventsManager() {
           className='text-center sm:text-right'
         >
           <Button
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setSaveProgress(idleSaveProgress);
+              setIsCreating(true);
+            }}
             className="bg-gradient-to-b from-pink-400 via-pink-600 to-pink-500 hover:bg-pink-700 text-white w-full sm:w-auto font-semibold"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -284,191 +296,6 @@ export default function EventsManager() {
           </Button>
         </motion.div>
       </motion.div>
-
-      {/* Live Preview */}
-      <AnimatePresence>
-        {showPreview && previewEvent && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-             
-          >
-            <Card  className="border-blue-200 bg-blue-50">
-              <CardHeader >
-                <div className="flex sm:justify-between sm:items-center gap-2">
-                  <CardTitle className="text-blue-900 flex items-center gap-2 text-base sm:text-lg">
-                    <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span   className="text-wrap text-xs">Live Preview - {previewEvent.heading_en}</span>
-                                     
-                  </CardTitle>
-                   <motion.div
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPreview(false)}
-                      className="text-blue-700 hover:bg-blue-100 cursor-pointer"
-                    
-                    >
-                      <X className="w-4 h-4 " />
-                    </Button>
-                  </motion.div>
-
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="bg-white rounded-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
-                  {/* Event Heading */}
-                  <motion.h1 
-                    initial={{ scale: 0.95 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-xl sm:text-3xl font-bold text-pink-800 text-center text-wrap"
-                  >
-                    {previewEvent.heading_en}
-                  </motion.h1>
-
-                  {/* Description 1 */}
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
-                    className="bg-white p-3 sm:p-6 rounded-lg shadow-md border "
-                  >
-                    <p className="text-sm sm:text-base text-purple-700 font-semibold truncate">
-                      {previewEvent.description1_en}
-                    </p>
-                  </motion.div>
-
-                  {/* Description 2 */}
-                  {previewEvent.description2_en && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.2 }}
-                      className="bg-white p-3 sm:p-6 rounded-lg shadow-md border"
-                    >
-                      <p className="text-sm sm:text-base text-purple-700 font-semibold truncate">
-                        {previewEvent.description2_en}
-                      </p>
-                    </motion.div>
-                  )}
-
-                  {/* Photo Section */}
-                  {previewMedia.some(m => m.type === 'photo') && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.3 }}
-                      className="space-y-3 sm:space-y-4"
-                    >
-                      <h2 className="text-lg sm:text-2xl font-bold text-pink-800">
-                        {previewEvent.photoSubheading_en}
-                      </h2>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
-                        {previewMedia
-                          .filter(m => m.type === 'photo')
-                          .slice(0, 4)
-                          .map((photo, index) => (
-                            <motion.div 
-                              key={photo.id}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.2, delay: index * 0.1 }}
-                              whileHover={{ scale: 1.05 }}
-                              className="bg-white p-1 sm:p-2 rounded-lg shadow-md"
-                            >
-                              <NextImage
-                                src={photo.url}
-                                alt={photo.heading_en || 'Event Photo'}
-                                width={240}
-                                height={160}
-                                className="w-full h-16 sm:h-24 object-cover rounded"
-                              />
-                              {photo.heading_en && (
-                                <p className="text-xs text-pink-800 mt-1 font-semibold truncate">
-                                  {photo.heading_en}
-                                </p>
-                              )}
-                            </motion.div>
-                          ))}
-                      </div>
-                      {previewMedia.filter(m => m.type === 'photo').length > 4 && (
-                        <p className="text-xs sm:text-sm text-gray-600">
-                          ...and {previewMedia.filter(m => m.type === 'photo').length - 4} more photos
-                        </p>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* Video Section - Similar responsive treatment */}
-                  {previewMedia.some(m => m.type === 'video') && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.4 }}
-                      className="space-y-3 sm:space-y-4"
-                    >
-                      <h2 className="text-lg sm:text-2xl font-bold text-pink-800">
-                        {previewEvent.videoSubheading_en}
-                      </h2>
-                      
-                      {/* Video sections with responsive grid */}
-                      {previewMedia.some(m => m.type === 'video' && m.videoType === 'interview') && (
-                        <div>
-                          <h3 className="text-base sm:text-xl font-bold text-pink-700 mb-2">Interviews:-</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                            {previewMedia
-                              .filter(m => m.type === 'video' && m.videoType === 'interview')
-                              .slice(0, 2)
-                              .map((video, index) => (
-                                <motion.div 
-                                  key={video.id}
-                                  initial={{ opacity: 0, scale: 0.9 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  transition={{ duration: 0.2, delay: index * 0.1 }}
-                                  whileHover={{ scale: 1.02 }}
-                                  className="bg-white p-1 sm:p-2 rounded-lg shadow-md"
-                                >
-                                  <div className="bg-gray-200 rounded aspect-video flex items-center justify-center">
-                                    <Video className="w-8 h-8 sm:w-12 sm:h-12 text-gray-500" />
-                                  </div>
-                                  {video.heading_en && (
-                                    <p className="text-xs sm:text-sm text-pink-800 mt-2 font-semibold">
-                                      {video.heading_en}
-                                    </p>
-                                  )}
-                                </motion.div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* No Media Message */}
-                  {previewMedia.length === 0 && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 0.5 }}
-                      className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg"
-                    >
-                      <ImageIcon className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm sm:text-base text-gray-600">No media uploaded for this event yet.</p>
-                      <p className="text-xs sm:text-sm text-gray-500">Add photos and videos in the Media tab.</p>
-                    </motion.div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Create/Edit Form */}
       <AnimatePresence>
@@ -504,29 +331,15 @@ export default function EventsManager() {
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                         <div className="flex-1">
                           <Label className="text-xs sm:text-sm text-blue-700 mb-1 block">📋 Use slug from your posts:</Label>
-                          <Select
+                          <SlugCombobox
                             value={formData.slug || ""}
+                            options={postSlugOptions}
                             onValueChange={(value) => setFormData(prev => ({ ...prev, slug: value }))}
-                          >
-                            <SelectTrigger className="border-blue-200 focus:border-blue-400 w-full">
-                              <SelectValue 
-                                placeholder="Select a slug from your posts..." 
-                                className="truncate block w-full text-left overflow-hidden"
-                              />
-                            </SelectTrigger>
-                            <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] sm:max-w-none">
-                              {availablePostSlugs.map((postSlug) => (
-                                <SelectItem key={postSlug.id} value={postSlug.eventPageSlug}>
-                                  <div className="flex flex-col items-start w-full min-w-0">
-                                    <span className="font-medium text-sm w-full truncate">{postSlug.title_en}</span>
-                                    <code className="text-xs text-blue-600  px-1 rounded w-full truncate">
-                                      {postSlug.eventPageSlug}
-                                    </code>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            placeholder="Search or select a slug from your posts..."
+                            searchPlaceholder="Type post title or slug..."
+                            emptyMessage="No matching post slugs found."
+                            className="border-blue-200 hover:bg-blue-50"
+                          />
                         </div>
                         <div className="flex items-end">
                           <motion.div
@@ -651,7 +464,7 @@ export default function EventsManager() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                  <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-start">
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -659,10 +472,15 @@ export default function EventsManager() {
                     >
                       <Button
                         onClick={handleSave}
+                        disabled={saving}
                         className="bg-pink-600 hover:bg-pink-700 text-white w-full sm:w-auto"
                       >
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Event
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        {saving ? 'Saving...' : 'Save Event'}
                       </Button>
                     </motion.div>
                     <motion.div
@@ -679,6 +497,7 @@ export default function EventsManager() {
                         Cancel
                       </Button>
                     </motion.div>
+                    <SaveProgress state={saveProgress} className="sm:ml-auto" />
                   </div>
                 </div>
               </CardContent>
@@ -755,22 +574,6 @@ export default function EventsManager() {
                     
                     {/* Action Buttons - Responsive layout */}
                     <div className="flex flex-row lg:flex-col gap-1 sm:gap-2 justify-end lg:justify-start">
-                     <Link href="#live-eventpreview">
-                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                       
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePreview(event)}
-                            className="border-blue-300 text-blue-700 hover:bg-blue-50 p-2"
-                          
-                          > 
-                            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                         
-                          </Button>
-                        
-                      </motion.div>
-                       </Link>
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button
                           variant="outline"
