@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { postsTable } from '@/db/schema';
 import { desc } from 'drizzle-orm';
+import { scheduleEmbeddingSync } from '@/lib/rag';
 
 export async function GET() {
   try {
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const [newPost] = await db.insert(postsTable).values(body).returning();
+    scheduleEmbeddingSync({ sourceType: 'post', sourceId: newPost.id });
     return NextResponse.json(newPost, { status: 201 });
   } catch (error) {
     console.error('Error creating post:', error);

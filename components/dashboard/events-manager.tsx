@@ -20,7 +20,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, Save, X, Loader2, Calendar, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   idleSaveProgress,
@@ -64,6 +63,17 @@ const generateSlug = (heading: string) => {
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .trim();
+};
+
+const scrollToManagerSection = (id: string) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  });
 };
 
 export default function EventsManager() {
@@ -229,6 +239,7 @@ export default function EventsManager() {
     setFormData(event);
     setEditingId(event.id!);
     setIsCreating(true);
+    scrollToManagerSection('edit-event');
   };
 
   // Delete event
@@ -305,9 +316,10 @@ export default function EventsManager() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
+            id='edit-event'
           >
             <Card className="border-pink-200">
-              <CardHeader id='edit-event'>
+              <CardHeader>
                 <CardTitle className="text-pink-900 flex items-center gap-2 text-base sm:text-lg">
                   <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                   {editingId ? 'Edit Event' : 'Create New Event'}
@@ -584,18 +596,16 @@ export default function EventsManager() {
                           <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </motion.div>
-                      <Link href="#edit-event">
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(event)}
-                            className="border-pink-300 text-pink-700 hover:bg-pink-50 p-2"
-                          >
-                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        </motion.div>
-                      </Link>
+                      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(event)}
+                          className="border-pink-300 text-pink-700 hover:bg-pink-50 p-2"
+                        >
+                          <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Button>
+                      </motion.div>
                       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                         <Button
                           variant="outline"

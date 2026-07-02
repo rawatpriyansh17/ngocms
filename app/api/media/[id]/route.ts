@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { mediaTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { deactivateContentEmbeddingSource } from '@/lib/rag';
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function PUT(
     if (!updatedMedia) {
       return NextResponse.json({ error: 'Media not found' }, { status: 404 });
     }
-    
+
     return NextResponse.json(updatedMedia);
   } catch (error) {
     console.error('Error updating media:', error);
@@ -58,6 +59,8 @@ export async function DELETE(
     if (!deletedMedia) {
       return NextResponse.json({ error: 'Media not found' }, { status: 404 });
     }
+
+    void deactivateContentEmbeddingSource('media', deletedMedia.id, null);
     
     return NextResponse.json({ message: 'Media deleted successfully' });
   } catch (error) {

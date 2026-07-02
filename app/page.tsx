@@ -11,6 +11,7 @@ import MediaManager from '@/components/dashboard/media-manager';
 import DashboardStats from '@/components/dashboard/dashboard-stats';
 import LatestEventManager from '@/components/dashboard/latest-event-manager';
 import Image from 'next/image';
+import { AiSyncIndicator } from '@/components/dashboard/ai-sync-indicator';
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('posts');
@@ -40,14 +41,14 @@ export default function Dashboard() {
                 className="object-cover rounded-full m-2"
               />
               </motion.div>
-              <div>
-                <h1 className="text-md sm:text-3xl font-bold text-pink-900">
+                <div className="text-sm sm:text-3xl font-bold text-pink-900">
                   Content Management System
-                </h1>
-              </div>
+                </div>
+    
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
+              <AiSyncIndicator />
               <UserButton />
             </div>
           </div>

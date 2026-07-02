@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { latestEventTable } from '@/db/schema';
+import { scheduleEmbeddingSync } from '@/lib/rag';
 
 const LATEST_EVENT_ID = 1;
 
@@ -49,6 +50,8 @@ export async function PUT(request: NextRequest) {
         .where(eq(latestEventTable.id, LATEST_EVENT_ID))
         .returning();
 
+      scheduleEmbeddingSync({ sourceType: 'latest_event', sourceId: LATEST_EVENT_ID });
+
       return NextResponse.json(updated);
     }
 
@@ -56,6 +59,8 @@ export async function PUT(request: NextRequest) {
       .insert(latestEventTable)
       .values(values)
       .returning();
+
+    scheduleEmbeddingSync({ sourceType: 'latest_event', sourceId: LATEST_EVENT_ID });
 
     return NextResponse.json(created, { status: 201 });
   } catch (error) {

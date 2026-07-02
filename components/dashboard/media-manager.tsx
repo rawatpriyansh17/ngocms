@@ -70,6 +70,17 @@ const fallbackPreviewImage = '/placeholder.jpg';
 
 const getSafeImageSrc = (src?: string | null) => src?.trim() || fallbackPreviewImage;
 
+const scrollToManagerSection = (id: string) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  });
+};
+
 export default function MediaManager() {
   const [media, setMedia] = useState<Media[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -326,6 +337,8 @@ export default function MediaManager() {
       // Don't set selectedFile since it's already uploaded
       setSelectedFile(null);
     }
+
+    scrollToManagerSection('edit-media');
   };
 
   // Delete media
@@ -472,6 +485,7 @@ export default function MediaManager() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
+                  id="edit-media"
                 >
                   <Card className="border-pink-200">
                     <CardHeader >
@@ -559,9 +573,7 @@ export default function MediaManager() {
                                     <p className="text-xs sm:text-sm text-pink-600">
                                       {formData.type?.toUpperCase()} • Already uploaded
                                     </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Click X to remove and upload new media
-                                    </p>
+                          
                                   </>
                                 )}
                               </div>

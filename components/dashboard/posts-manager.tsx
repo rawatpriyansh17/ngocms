@@ -24,7 +24,6 @@ import { Plus, Edit, Trash2, Save, X, Loader2, Eye, GripVertical, Play, Video } 
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone';
 import { upload } from '@imagekit/next';
 import NextImage from 'next/image';
-import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   idleSaveProgress,
@@ -61,6 +60,17 @@ const availableThumbnails = [
 const fallbackPreviewImage = '/placeholder.jpg';
 
 const getSafeImageSrc = (src?: string | null) => src?.trim() || fallbackPreviewImage;
+
+const scrollToManagerSection = (id: string) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  });
+};
 
 const uploadPostToImageKit = async (
   file: File,
@@ -310,6 +320,8 @@ export default function PostsManager() {
       setPreviewUrl(post.mediaUrl);
       setSelectedFile(null);
     }
+
+    scrollToManagerSection('edit-post');
   };
 
   const handleDelete = async (id: number) => {
@@ -610,9 +622,7 @@ export default function PostsManager() {
                               <p className="text-xs sm:text-sm text-pink-600">
                                 {formData.mediaType?.toUpperCase()} • Already uploaded
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Click X to remove and upload new media
-                              </p>
+                       
                             </>
                           )}
                         </div>
@@ -763,10 +773,6 @@ export default function PostsManager() {
                           </div>
                         </div>
 
-                        {/* Help Text */}
-                        <div className="mt-3 p-2 bg-blue-100 rounded text-xs text-blue-700">
-                          💡 <strong>Tip:</strong> Choose a thumbnail that best represents your video content. This will be shown as the video preview on your website.
-                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -1042,18 +1048,16 @@ export default function PostsManager() {
                                     <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                                   </Button>
                                 </motion.div>
-                                <Link href='#edit-post'>
-                                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEdit(post)}
-                                      className="border-pink-300 text-pink-700 hover:bg-pink-50 p-2"
-                                    >
-                                      <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    </Button>
-                                  </motion.div>
-                                </Link>
+                                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(post)}
+                                    className="border-pink-300 text-pink-700 hover:bg-pink-50 p-2"
+                                  >
+                                    <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  </Button>
+                                </motion.div>
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                   <Button
                                     variant="outline"

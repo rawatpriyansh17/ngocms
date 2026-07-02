@@ -1,5 +1,18 @@
 import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  customType,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+
+const f32Embedding = customType<{ data: string }>({
+  dataType() {
+    return 'F32_BLOB(1536)';
+  },
+});
 
 // Posts table for PostSection component
 export const postsTable = sqliteTable('posts', {
@@ -54,6 +67,41 @@ export const latestEventTable = sqliteTable('latest_event', {
   updatedAt: text('updated_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
+export const contentEmbeddingsTable = sqliteTable(
+  'content_embeddings',
+  {
+    id: integer('id').primaryKey(),
+    sourceType: text('source_type').notNull(),
+    sourceId: integer('source_id'),
+    sourceSlug: text('source_slug'),
+    chunkIndex: integer('chunk_index').notNull().default(0),
+    sourceHash: text('source_hash').notNull(),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    url: text('url').notNull(),
+    metadata: text('metadata').default('{}').notNull(),
+    isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
+    embedding: f32Embedding('embedding').notNull(),
+    createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+    updatedAt: text('updated_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  },
+  (table) => [
+    uniqueIndex('content_embeddings_source_chunk_hash_idx').on(
+      table.sourceType,
+      table.sourceId,
+      table.sourceSlug,
+      table.chunkIndex,
+      table.sourceHash
+    ),
+    index('content_embeddings_source_idx').on(
+      table.sourceType,
+      table.sourceId,
+      table.sourceSlug
+    ),
+    index('content_embeddings_active_idx').on(table.isActive),
+  ]
+);
+
 // Types
 export type InsertPost = typeof postsTable.$inferInsert;
 export type SelectPost = typeof postsTable.$inferSelect;
@@ -63,3 +111,4 @@ export type InsertMedia = typeof mediaTable.$inferInsert;
 export type SelectMedia = typeof mediaTable.$inferSelect;
 export type InsertLatestEvent = typeof latestEventTable.$inferInsert;
 export type SelectLatestEvent = typeof latestEventTable.$inferSelect;
+export type SelectContentEmbedding = typeof contentEmbeddingsTable.$inferSelect;

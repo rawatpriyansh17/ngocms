@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { postsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { deactivateContentEmbeddingSource, scheduleEmbeddingSync } from '@/lib/rag';
 
 export async function GET(
   request: NextRequest,
@@ -36,6 +37,8 @@ export async function PUT(
     if (!updatedPost) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
+
+    scheduleEmbeddingSync({ sourceType: 'post', sourceId: updatedPost.id });
     
     return NextResponse.json(updatedPost);
   } catch (error) {
@@ -58,6 +61,8 @@ export async function DELETE(
     if (!deletedPost) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
+
+    void deactivateContentEmbeddingSource('post', deletedPost.id, deletedPost.eventPageSlug);
     
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {

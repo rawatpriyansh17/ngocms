@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { eventsTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { scheduleEmbeddingSync } from '@/lib/rag';
 
 export async function GET(
   request: NextRequest,
@@ -36,6 +37,8 @@ export async function PUT(
     if (!updatedEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
+
+    scheduleEmbeddingSync({ sourceType: 'all' });
     
     return NextResponse.json(updatedEvent);
   } catch (error) {
@@ -58,6 +61,8 @@ export async function DELETE(
     if (!deletedEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
+
+    scheduleEmbeddingSync({ sourceType: 'all' });
     
     return NextResponse.json({ message: 'Event deleted successfully' });
   } catch (error) {
